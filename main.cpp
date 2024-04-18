@@ -15,7 +15,15 @@ struct Matrix4x4 {
 ///-------------------------------
 ///関数の宣言
 ///-------------------------------
-//4x4行列の数値表示
+// 3次元ベクトル表示
+static void Vector3ScreenPrintf(int x, int y, Vector3 vector3, const char* label) {
+	Novice::ScreenPrintf(x, y, "%4.2f", vector3.x);
+	Novice::ScreenPrintf(x + 50, y, "%4.2f", vector3.y);
+	Novice::ScreenPrintf(x + 100, y, "%4.2f", vector3.z);
+	Novice::ScreenPrintf(x + 150, y, "%s", label);
+};
+
+// 4x4行列の数値表示
 static const int kRowHeight = 20;
 static const int kColumnWight = 60;
 void Matrix4x4ScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label) {
@@ -25,10 +33,10 @@ void Matrix4x4ScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* la
 		}
 	}
 
-	Novice::ScreenPrintf(x + 200, y, "%s", label);
+	Novice::ScreenPrintf(x + 250, y, "%s", label);
 }
 
-//6.単位行列の作成
+// 単位行列の作成
 Matrix4x4 IdentityMatrix() {
 	Matrix4x4 result;
 	for (int i = 0; i < 4; ++i) {
@@ -48,9 +56,9 @@ Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
 	Matrix4x4 result = IdentityMatrix(); // 単位行列を初期化
 
 	// 平行移動成分をセット
-	result.m4x4[0][3] = translate.x;
-	result.m4x4[1][3] = translate.y;
-	result.m4x4[2][3] = translate.z;
+	result.m4x4[3][0] = translate.x;
+	result.m4x4[3][1] = translate.y;
+	result.m4x4[3][2] = translate.z;
 
 	return result;
 }
@@ -87,8 +95,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Novice::Initialize(kWindowTitle, 1280, 720);
 
 	// キー入力結果を受け取る箱
-	char keys[256] = {0};
-	char preKeys[256] = {0};
+	char keys[256] = { 0 };
+	char preKeys[256] = { 0 };
 
 	///-------------------------------
 	///変数の宣言
@@ -104,6 +112,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		1.0f,4.0f,2.0f,3.0f,
 		2.0f,2.0f,1.0f,3.0f
 	};
+
 	Vector3 transformed = Transform(point, transfromMatrix);
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -127,7 +136,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		
+		Vector3ScreenPrintf(0, 20, transformed, "transformed");
+		Matrix4x4ScreenPrintf(0, kRowHeight * 5, translateMatrix, "translateMatrix");
+		Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 2, scaleMatrix, "scaleMatrix");
 
 
 
