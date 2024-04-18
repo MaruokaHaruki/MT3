@@ -1,6 +1,7 @@
 #include <Novice.h>
 #include <math.h>
 #include<Vector3.h>
+#include "assert.h"
 
 const char kWindowTitle[] = "LE2B_23_マルオカ_ハルキ";
 
@@ -80,10 +81,15 @@ Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
 	Vector3 result;
 
 	// 行列とベクトルの乗算
-	result.x = vector.x * matrix.m4x4[0][0] + vector.y * matrix.m4x4[0][1] + vector.z * matrix.m4x4[0][2] + matrix.m4x4[0][3];
-	result.y = vector.x * matrix.m4x4[1][0] + vector.y * matrix.m4x4[1][1] + vector.z * matrix.m4x4[1][2] + matrix.m4x4[1][3];
-	result.z = vector.x * matrix.m4x4[2][0] + vector.y * matrix.m4x4[2][1] + vector.z * matrix.m4x4[2][2] + matrix.m4x4[2][3];
-
+	result.x = vector.x * matrix.m4x4[0][0] + vector.y * matrix.m4x4[1][0] + vector.z * matrix.m4x4[2][0] + matrix.m4x4[3][0];
+	result.y = vector.x * matrix.m4x4[0][1] + vector.y * matrix.m4x4[1][1] + vector.z * matrix.m4x4[2][1] + matrix.m4x4[3][1];
+	result.z = vector.x * matrix.m4x4[0][2] + vector.y * matrix.m4x4[1][2] + vector.z * matrix.m4x4[2][2] + matrix.m4x4[3][2];
+	float w = vector.x * matrix.m4x4[0][3] + vector.y * matrix.m4x4[1][3] + vector.z * matrix.m4x4[2][3] + matrix.m4x4[3][3];
+	//この処理を忘れない！
+	assert(w != 0.0f);
+	result.x /= w;
+	result.y /= w;
+	result.z /= w; 
 	return result;
 }
 
