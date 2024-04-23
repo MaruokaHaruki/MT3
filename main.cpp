@@ -1,5 +1,6 @@
 #include <Novice.h>
 //#include <math.h>
+#include <cmath>
 #include<Vector3.h>
 #include "assert.h"
 
@@ -66,12 +67,55 @@ Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
 
 // 拡大縮小行列を作成する関数
 Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
-	Matrix4x4 result = IdentityMatrix(); // 単位行列を初期化
+	// 単位行列を初期化
+	Matrix4x4 result = IdentityMatrix();
 
 	// 拡大縮小成分をセット
 	result.m4x4[0][0] = scale.x;
 	result.m4x4[1][1] = scale.y;
 	result.m4x4[2][2] = scale.z;
+
+	return result;
+}
+
+//X軸回転行列(yz)
+Matrix4x4 MakeRotateXMatrix(float radian) {
+	// 単位行列で初期化
+	Matrix4x4 result = IdentityMatrix();
+
+	//行列の計算
+	result.m4x4[1][1] = std::cos(radian);
+	result.m4x4[1][2] = std::sin(radian);
+	result.m4x4[2][1] = -std::sin(radian);
+	result.m4x4[2][2] = std::cos(radian);
+
+	return result;
+}
+
+//Y軸回転行列(zx)
+Matrix4x4 MakeRotateYMatrix(float radian) {
+	// 単位行列で初期化
+	Matrix4x4 result = IdentityMatrix();
+
+	//行列の計算
+	result.m4x4[0][0] = std::cos(radian);
+	result.m4x4[0][2] = -std::sin(radian);
+	result.m4x4[2][0] = std::sin(radian);
+	result.m4x4[2][2] = std::cos(radian);
+
+	return result;
+}
+
+//Z軸回転行列(xy)
+Matrix4x4 MakeRotateZMatrix(float radian) {
+	// 単位行列で初期化
+	Matrix4x4 result = IdentityMatrix();
+
+	//行列の計算
+	result.m4x4[0][0] = std::cos(radian);
+	result.m4x4[0][1] = std::sin(radian);
+	result.m4x4[1][0] = -std::sin(radian);
+	result.m4x4[1][1] = std::cos(radian);
 
 	return result;
 }
@@ -93,7 +137,6 @@ Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
 	return result;
 }
 
-
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -107,19 +150,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///-------------------------------
 	///変数の宣言
 	///-------------------------------
-	Vector3 translate{ 4.1f,2.6f,0.8f };
-	Vector3 scale{ 1.5f,5.2f,7.3f };
-	Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
-	Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
-	Vector3 point{ 2.3f,3.8f,1.4f };
-	Matrix4x4 transfromMatrix = {
-		1.0f,2.0f,3.0f,4.0f,
-		3.0f,1.0f,1.0f,2.0f,
-		1.0f,4.0f,2.0f,3.0f,
-		2.0f,2.0f,1.0f,3.0f
-	};
+	
+	//使用例
+	//Vector3 translate{ 4.1f,2.6f,0.8f };
+	//Vector3 scale{ 1.5f,5.2f,7.3f };
+	//Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
+	//Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
+	//Vector3 point{ 2.3f,3.8f,1.4f };
+	//Matrix4x4 transfromMatrix = {
+	//	1.0f,2.0f,3.0f,4.0f,
+	//	3.0f,1.0f,1.0f,2.0f,
+	//	1.0f,4.0f,2.0f,3.0f,
+	//	2.0f,2.0f,1.0f,3.0f
+	//};
+	//Vector3 transformed = Transform(point, transfromMatrix);
 
-	Vector3 transformed = Transform(point, transfromMatrix);
+	Vector3 rotate{ 0.4f,1.43f,-0.8f };
+	Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
+	Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
+	Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
+	Matrix4x4 rotateXYZMatrix = Multiply()
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -144,11 +194,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 		///-------------------------------
-		///数値の秒yが
+		///数値の描画
 		///-------------------------------
-		Vector3ScreenPrintf(0, 20, transformed, "transformed");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 5, translateMatrix, "translateMatrix");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 2, scaleMatrix, "scaleMatrix");
+		//Vector3ScreenPrintf(0, 20, transformed, "transformed");
+		//Matrix4x4ScreenPrintf(0, kRowHeight * 5, translateMatrix, "translateMatrix");
+		//Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 2, scaleMatrix, "scaleMatrix");
+
+
+
 
 		///
 		/// ↑描画処理ここまで
