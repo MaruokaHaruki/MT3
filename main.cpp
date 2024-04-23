@@ -1,5 +1,5 @@
 #include <Novice.h>
-#include <math.h>
+//#include <math.h>
 #include<Vector3.h>
 #include "assert.h"
 
@@ -89,7 +89,7 @@ Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
 	assert(w != 0.0f);
 	result.x /= w;
 	result.y /= w;
-	result.z /= w; 
+	result.z /= w;
 	return result;
 }
 
@@ -142,11 +142,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
+
+		///-------------------------------
+		///数値の秒yが
+		///-------------------------------
 		Vector3ScreenPrintf(0, 20, transformed, "transformed");
 		Matrix4x4ScreenPrintf(0, kRowHeight * 5, translateMatrix, "translateMatrix");
 		Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 2, scaleMatrix, "scaleMatrix");
-
-
 
 		///
 		/// ↑描画処理ここまで
