@@ -356,6 +356,26 @@ Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
 	return result;
 }
 
+//アフィン変換
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate) {
+	//縮小拡大
+	Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
+	//回転
+	Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
+	Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
+	Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
+	Matrix4x4 rotateXYZMatrix = MultiplyMatrix(rotateXMatrix, MultiplyMatrix(rotateYMatrix, rotateZMatrix));
+	//並行移動
+	Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
+	//合成
+	Matrix4x4 result = IdentityMatrix();
+	result = MultiplyMatrix(scaleMatrix, rotateXYZMatrix);
+	result = MultiplyMatrix(result, translateMatrix);
+
+	return result;
+}
+
+
 #pragma endregion
 
 ///
@@ -377,24 +397,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///-------------------------------
 
 	//使用例
-	//Vector3 translate{ 4.1f,2.6f,0.8f };
-	//Vector3 scale{ 1.5f,5.2f,7.3f };
-	//Matrix4x4 translateMatrix = MakeTranslateMatrix(translate);
-	//Matrix4x4 scaleMatrix = MakeScaleMatrix(scale);
-	//Vector3 point{ 2.3f,3.8f,1.4f };
-	//Matrix4x4 transfromMatrix = {
-	//	1.0f,2.0f,3.0f,4.0f,
-	//	3.0f,1.0f,1.0f,2.0f,
-	//	1.0f,4.0f,2.0f,3.0f,
-	//	2.0f,2.0f,1.0f,3.0f
-	//};
-	//Vector3 transformed = Transform(point, transfromMatrix);
-
+	Vector3 scale{ 1.2f,0.79f,-2.1f };
 	Vector3 rotate{ 0.4f,1.43f,-0.8f };
-	Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
-	Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
-	Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
-	Matrix4x4 rotateXYZMatrix = MultiplyMatrix(rotateXMatrix, MultiplyMatrix(rotateYMatrix, rotateZMatrix));
+	Vector3 translate{ 2.7f,-4.15f,1.57f };
+
+	Matrix4x4 worldMatrix = MakeAffineMatrix(scale, rotate, translate);
+
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -421,14 +429,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///-------------------------------
 		///数値の描画
 		///-------------------------------
-		//Vector3ScreenPrintf(0, 20, transformed, "transformed");
-		//Matrix4x4ScreenPrintf(0, kRowHeight * 5, translateMatrix, "translateMatrix");
-		//Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 2, scaleMatrix, "scaleMatrix");
 
-		Matrix4x4ScreenPrintf(0, 0, rotateXMatrix, "rotateXMatrix");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 5, rotateYMatrix, "rotateYMatrix");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 2, rotateZMatrix, "rotateZMatrix");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 5 * 3, rotateXYZMatrix, "rotateXYZMatrix");
+		Matrix4x4ScreenPrintf(0, 0, worldMatrix, "worldMatrix");
 
 
 		///
