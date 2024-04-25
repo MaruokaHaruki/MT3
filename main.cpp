@@ -382,6 +382,68 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 ///
 ///
 
+///
+///レンダリングパイプライン
+///
+
+
+//正射影行列
+Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip) {
+	// 単位行列で初期化
+	Matrix4x4 result = IdentityMatrix();
+
+	// 正射影平面の範囲から正射影行列を構築する
+	result.m4x4[0][0] = 2.0f / ( right - left );
+	result.m4x4[1][1] = 2.0f / ( top - bottom );
+	result.m4x4[2][2] = -2.0f / ( farClip - nearClip );
+	result.m4x4[3][0] = -( right + left ) / ( right - left );
+	result.m4x4[3][1] = -( top + bottom ) / ( top - bottom );
+	result.m4x4[3][2] = -( farClip + nearClip ) / ( farClip - nearClip );
+
+	return result;
+
+}
+
+//透視投影行列
+Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
+	// 単位行列で初期化
+	Matrix4x4 result = IdentityMatrix();
+
+	// tanの逆説
+	float cot = tanf(fovY / 2.0f);
+
+	// 射影変換行列の要素を計算する
+	result.m4x4[0][0] = 1.0f / ( aspectRatio * cot );
+	result.m4x4[1][1] = 1.0f / cot;
+	result.m4x4[2][2] = farClip / ( farClip - nearClip );
+	result.m4x4[2][3] = 1.0f;
+	result.m4x4[3][2] = -nearClip * farClip / ( farClip - nearClip );
+	result.m4x4[3][3] = 0.0f;
+
+	return result;
+}
+
+//ビューポート行列
+Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, float minDepth, float maxDepth) {
+	// 単位行列で初期化
+	Matrix4x4 result = IdentityMatrix();
+
+	// ビューポート変換行列の要素を計算する
+	result.m4x4[0][0] = width / 2.0f;
+	result.m4x4[1][1] = -height / 2.0f;
+	result.m4x4[2][2] = maxDepth - minDepth;
+	result.m4x4[3][0] = left + width / 2.0f;
+	result.m4x4[3][1] = top + height / 2.0f;
+	result.m4x4[3][2] = minDepth;
+
+	return result;
+}
+
+///
+///
+/// 
+
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -397,11 +459,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///-------------------------------
 
 	//使用例
-	Vector3 scale{ 1.2f,0.79f,-2.1f };
-	Vector3 rotate{ 0.4f,1.43f,-0.8f };
-	Vector3 translate{ 2.7f,-4.15f,1.57f };
+	//Vector3 scale{ 1.2f,0.79f,-2.1f };
+	//Vector3 rotate{ 0.4f,1.43f,-0.8f };
+	//Vector3 translate{ 2.7f,-4.15f,1.57f };
 
-	Matrix4x4 worldMatrix = MakeAffineMatrix(scale, rotate, translate);
+	//Matrix4x4 worldMatrix = MakeAffineMatrix(scale, rotate, translate);
+
+	Matrix4x4 orthographicMatrix = MakeOrthographicMatrix(-160.0f, 160.0f, 200.0f, 300.0f, 0.0f, 1000.0f);
+
+	Matrix4x4 perspectiveFovMatrix = MakePerspectiveFovMatrix(0.63f, 1.33f, 0.1f, 1000.0f);
+
+	Matrix4x4 viewportMatrix = MakeViewportMatrix(100.0f,200.0f,600.0f,300.0f,0.0f,1.0f);
 
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -430,7 +498,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///数値の描画
 		///-------------------------------
 
-		Matrix4x4ScreenPrintf(0, 0, worldMatrix, "worldMatrix");
+	/*	Matrix4x4ScreenPrintf(0, 0, worldMatrix, "worldMatrix");*/
+
+		Matrix4x4ScreenPrintf(0, 0, orthographicMatrix, "orthographicMatrix");
+		Matrix4x4ScreenPrintf(0, kRowHeight * 5, perspectiveFovMatrix, "perspectiveFovMatrix");
+		Matrix4x4ScreenPrintf(0, kRowHeight * 10, viewportMatrix, "viewportMatrix");
 
 
 		///
