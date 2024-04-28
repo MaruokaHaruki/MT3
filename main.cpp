@@ -397,9 +397,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///-------------------------------
 
 	//使用例
-	Vector3 scale{ 1.2f,0.79f,-2.1f };
-	Vector3 rotate{ 0.4f,1.43f,-0.8f };
-	Vector3 translate{ 2.7f,-4.15f,1.57f };
+	Vector3 scale{ 1.0f,1.0f,1.0f };
+	Vector3 rotate{ 0.0f,0.0f,0.0f };
+	Vector3 translate{ 0.0f,0.0f,0.0f };
 
 	Matrix4x4 worldMatrix = MakeAffineMatrix(scale, rotate, translate);
 
@@ -416,6 +416,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓更新処理ここから
 		///
+		
+		rotate.y += 0.03f;
+		Matrix4x4 test = MakeAffineMatrix(scale, rotate, translate);
+		worldMatrix = test;
+
 
 		///
 		/// ↑更新処理ここまで
