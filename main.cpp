@@ -479,13 +479,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 translate{ 0.0f,0.0f,0.0f };
 
 	//カメラ行列
-	Vector3 cameraPosition{ 0.0f,0.0f,0.0f };
+	Vector3 cameraPosition{ 0.0f,0.0f,-1.0f };
 	
 	//ローカル頂点
 	Vector3 kLocalVertices[3] = {
-	{0.0f, -0.1f, 1.0f},  // 頂点0のローカル座標
-	{0.1f, 0.1f, 1.0f},  // 頂点1のローカル座標
-	{-0.1f, 0.1f, 1.0f}   // 頂点2のローカル座標
+	{0.0f, -0.1f, 0.0f},  // 頂点0のローカル座標
+	{0.1f, 0.1f, 0.0f},  // 頂点1のローカル座標
+	{-0.1f, 0.1f, 0.0f}   // 頂点2のローカル座標
 	};
 	
 
@@ -503,8 +503,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		//wSキーで前後に、ADキーで左右に三角形を動かす
+		if (keys[DIK_W]) {
+			translate.z += 0.01f;
+		}
+		if (keys[DIK_S]) {
+			translate.z -= 0.01f;
+		}
+		if (keys[DIK_A]) {
+			translate.x -= 0.01f;
+			}
+		if (keys[DIK_D]) {
+			translate.x += 0.01f;
+		}
 		/*translate.z += 0.001f;*/
-		rotate.z += 0.01f;
+
+		//回転処理
+		rotate.y += 0.1f;
 
 
 		// 各行列の計算
