@@ -17,6 +17,14 @@ struct Matrix4x4 {
 ///-------------------------------
 ///関数の宣言
 ///-------------------------------
+//ベクター3描画
+static const int kColumnWidth = 60;
+void Vector3ScreenPrintf(uint32_t x, uint32_t y, Vector3 v, const char* label) {
+	Novice::ScreenPrintf(x, y, "%.02f", v.x);
+	Novice::ScreenPrintf(x + kColumnWidth, y, "%.02f", v.y);
+	Novice::ScreenPrintf(x + kColumnWidth * 2, y, "%.02f", v.z);
+	Novice::ScreenPrintf(x + kColumnWidth * 3, y, "%s", label);
+}
 
 ///
 ///4x4の計算
@@ -249,11 +257,6 @@ Matrix4x4 IdentityMatrix() {
 #pragma endregion
 
 ///
-///end
-///
-
-
-///
 ///3次元アフィン行列
 ///
 
@@ -379,12 +382,10 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 #pragma endregion
 
 ///
-///
-///
-
-///
 ///レンダリングパイプライン
 ///
+
+#pragma region レンダリングパイプライン
 
 
 //正射影行列
@@ -438,14 +439,24 @@ Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, f
 
 	return result;
 }
+#pragma endregion
 
 ///
+///クロス積
 ///
-/// 
-
+Vector3 Cross(const Vector3& v1, const Vector3& v2) {
+	Vector3 result{};
+	result.x = v1.y * v2.z - v1.z * v2.y;
+	result.y = v1.z * v2.x - v1.x * v2.z;
+	result.z = v1.x * v2.y - v1.y * v2.x;
+	return result;
+}
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+
+	const uint32_t kWindowWidth = 1280;
+	const uint32_t kWindowHeight = 720;
 
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, 1280, 720);
@@ -457,13 +468,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///-------------------------------
 	///変数の宣言
 	///-------------------------------
+	//クロス積の確認用
+	Vector3 v1{ 1.2f,-3.9f,2.5f };
+	Vector3 v2{ 2.8f,0.4f,-1.3f };
+	Vector3 cross = Cross(v1, v2);
+	Vector3ScreenPrintf(0, 0, cross, "Cross");
 
-	Matrix4x4 orthographicMatrix = MakeOrthographicMatrix(-160.0f, 160.0f, 200.0f, 300.0f, 0.0f, 1000.0f);
+	//3次元アフィン行列
+	Vector3 rotate{ 0.0f,0.0f,0.0f };
+	Vector3 translate{ 0.0f,0.0f,0.0f };
 
-	Matrix4x4 perspectiveFovMatrix = MakePerspectiveFovMatrix(0.63f, 1.33f, 0.1f, 1000.0f);
-
-	Matrix4x4 viewportMatrix = MakeViewportMatrix(100.0f,200.0f,600.0f,300.0f,0.0f,1.0f);
-
+	//カメラ行列
+	Vector3 cameraPosition{ 0.0f,0.0f,-1.0f };
+	
+	//ローカル頂点
+	Vector3 kLocalVertices[3] = {
+	{0.0f, -0.1f, 0.0f},  // 頂点0のローカル座標
+	{0.1f, 0.1f, 0.0f},  // 頂点1のローカル座標
+	{-0.1f, 0.1f, 0.0f}   // 頂点2のローカル座標
+	};
+	
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -478,6 +502,43 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
+		//wSキーで前後に、ADキーで左右に三角形を動かす
+		if (keys[DIK_W]) {
+			translate.z += 0.01f;
+		}
+		if (keys[DIK_S]) {
+			translate.z -= 0.01f;
+		}
+		if (keys[DIK_A]) {
+			translate.x -= 0.01f;
+			}
+		if (keys[DIK_D]) {
+			translate.x += 0.01f;
+		}
+		/*translate.z += 0.001f;*/
+
+		//回転処理
+		rotate.y += 0.1f;
+
+
+		// 各行列の計算
+		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotate, translate);
+		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, { 0.0f,0.0f,0.0f }, cameraPosition);
+		Matrix4x4 viewMatrix = InverseMatrix(cameraMatrix);
+		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
+		//
+		Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
+		//
+		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
+		//
+		Vector3 screenVertices[3];
+		for (uint32_t i = 0; i < 3; ++i) {
+			Vector3 ndcVertex = Transform(kLocalVertices[i], worldViewProjectionMatrix);
+			// Viewport変換を行ってスクリーン座標へ
+			screenVertices[i] = Transform(ndcVertex, viewportMatrix);
+		}
+
+
 		///
 		/// ↑更新処理ここまで
 		///
@@ -490,13 +551,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///-------------------------------
 		///数値の描画
 		///-------------------------------
+		//クロス積
+		Vector3ScreenPrintf(0, 0, cross, "Cross");
+		//三角形の描画
+		Novice::DrawTriangle(
+			int(screenVertices[0].x), int(screenVertices[0].y),
+			int(screenVertices[1].x), int(screenVertices[1].y),
+			int(screenVertices[2].x), int(screenVertices[2].y),
+			RED, kFillModeSolid
+		);
 
-	/*	Matrix4x4ScreenPrintf(0, 0, worldMatrix, "worldMatrix");*/
+		Vector3ScreenPrintf(0, 50, screenVertices[0], "screenVertices[0]");
+		Vector3ScreenPrintf(0, 70, screenVertices[1], "screenVertices[1]");
+		Vector3ScreenPrintf(0, 90, screenVertices[2], "screenVertices[2]");
 
-		Matrix4x4ScreenPrintf(0, 0, orthographicMatrix, "orthographicMatrix");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 5, perspectiveFovMatrix, "perspectiveFovMatrix");
-		Matrix4x4ScreenPrintf(0, kRowHeight * 10, viewportMatrix, "viewportMatrix");
-
+		Vector3ScreenPrintf(int(screenVertices[0].x), int(screenVertices[0].y), screenVertices[0], "screenVertices[0]");
+		Vector3ScreenPrintf(int(screenVertices[1].x), int(screenVertices[1].y), screenVertices[1], "screenVertices[1]");
+		Vector3ScreenPrintf(int(screenVertices[2].x), int(screenVertices[2].y), screenVertices[2], "screenVertices[2]");
 
 		///
 		/// ↑描画処理ここまで
