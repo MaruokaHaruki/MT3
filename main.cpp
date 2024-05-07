@@ -26,6 +26,20 @@ void Vector3ScreenPrintf(uint32_t x, uint32_t y, Vector3 v, const char* label) {
 	Novice::ScreenPrintf(x + kColumnWidth * 3, y, "%s", label);
 }
 
+//内積
+float Dot(const Vector3& v1, const Vector3& v2) {
+	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
+//ベクター3減算
+Vector3 SubtractVector3(const Vector3& v1, const Vector3& v2) {
+	Vector3 result;
+	result.x = v1.x - v2.x;
+	result.y = v1.y - v2.y;
+	result.z = v1.z - v2.z;
+	return result;
+}
+
 ///
 ///4x4の計算
 ///
@@ -480,14 +494,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//カメラ行列
 	Vector3 cameraPosition{ 0.0f,0.0f,-1.0f };
-	
+
 	//ローカル頂点
 	Vector3 kLocalVertices[3] = {
 	{0.0f, -0.1f, 0.0f},  // 頂点0のローカル座標
 	{0.1f, 0.1f, 0.0f},  // 頂点1のローカル座標
 	{-0.1f, 0.1f, 0.0f}   // 頂点2のローカル座標
 	};
-	
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -511,14 +524,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		if (keys[DIK_A]) {
 			translate.x -= 0.01f;
-			}
+		}
 		if (keys[DIK_D]) {
 			translate.x += 0.01f;
 		}
 		/*translate.z += 0.001f;*/
 
 		//回転処理
-		rotate.y += 0.1f;
+		rotate.y += 0.01f;
 
 
 		// 各行列の計算
@@ -538,6 +551,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			screenVertices[i] = Transform(ndcVertex, viewportMatrix);
 		}
 
+		//2つの辺ベクトルを計算
+		Vector3 edge1 = SubtractVector3(screenVertices[1], screenVertices[0]);
+		Vector3 edge2 = SubtractVector3(screenVertices[2], screenVertices[1]);
+
+		// 三角形の法線ベクトルを求めるためにクロス積を計算
+		Vector3 triangleFront = Cross(edge1, edge2);
+
+		// 視点から見た三角形の法線ベクトルと視線ベクトルの内積を計算
+		float dotProduct = Dot(triangleFront, cameraPosition);
 
 		///
 		/// ↑更新処理ここまで
@@ -553,13 +575,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///-------------------------------
 		//クロス積
 		Vector3ScreenPrintf(0, 0, cross, "Cross");
-		//三角形の描画
-		Novice::DrawTriangle(
-			int(screenVertices[0].x), int(screenVertices[0].y),
-			int(screenVertices[1].x), int(screenVertices[1].y),
-			int(screenVertices[2].x), int(screenVertices[2].y),
-			RED, kFillModeSolid
-		);
+
+		// 内積が負の場合、三角形の表を向いている
+		if (dotProduct <= 0) {
+			// 三角形の描画
+			Novice::DrawTriangle(
+				int(screenVertices[0].x), int(screenVertices[0].y),
+				int(screenVertices[1].x), int(screenVertices[1].y),
+				int(screenVertices[2].x), int(screenVertices[2].y),
+				RED, kFillModeSolid
+			);
+		}
 
 		Vector3ScreenPrintf(0, 50, screenVertices[0], "screenVertices[0]");
 		Vector3ScreenPrintf(0, 70, screenVertices[1], "screenVertices[1]");
