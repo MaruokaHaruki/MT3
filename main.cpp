@@ -79,6 +79,27 @@ float Magnitude(const Vector3& v) {
 	return std::sqrt(Dot(v, v));
 }
 
+// 2つのベクトル間の距離を計算する関数
+float Distance(const Vector3& a, const Vector3& b) {
+	// ベクトルaとベクトルbの各成分の差を計算し、その平方を求める
+	// 各成分の平方を合計し、その平方根を取ることで距離を計算する
+	return std::sqrt(( a.x - b.x ) * ( a.x - b.x ) + ( a.y - b.y ) * ( a.y - b.y ) + ( a.z - b.z ) * ( a.z - b.z ));
+}
+
+//// ベクトルの正規化を行う関数
+//Vector3 Normalize(const Vector3& v) {
+//	// ベクトルの大きさ（長さ）を計算
+//	float normakize = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+//
+//	// 0除算を避ける
+//	if (normakize == 0) {
+//		return { 0, 0, 0 };
+//	}
+//
+//	// ベクトルを大きさで割って単位ベクトルを得る
+//	return { v.x / normakize, v.y / normakize, v.z / normakize };
+//}
+
 ///
 ///4x4の計算
 ///
@@ -567,48 +588,6 @@ void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMa
 ///
 ///Sphereを描画する関数
 ///
-//void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
-//	const uint32_t kSubDivision = 20;  // 緯度と経度の分割数を増やす
-//	const float kLatEvery = float(M_PI) / float(kSubDivision);  // 緯度の刻み幅
-//	const float kLonEvery = 2.0f * float(M_PI) / float(kSubDivision);  // 経度の刻み幅
-//
-//	 経度方向に分割
-//	for (uint32_t latIndex = 0; latIndex <= kSubDivision; ++latIndex) {
-//		float lat = float(M_PI) / 2.0f - latIndex * kLatEvery;  // 現在の緯度
-//		float sinLat = sin(lat);
-//		float cosLat = cos(lat);
-//
-//		 次の緯度
-//		float nextLat = float(M_PI) / 2.0f - ( latIndex + 1 ) * kLatEvery;
-//		float sinNextLat = sin(nextLat);
-//		float cosNextLat = cos(nextLat);
-//
-//		 経度の方向に分割
-//		for (uint32_t lonIndex = 0; lonIndex < kSubDivision; ++lonIndex) {
-//			float lon = lonIndex * kLonEvery;  // 現在の経度
-//			float nextLon = ( lonIndex + 1 ) * kLonEvery;  // 次の経度
-//
-//			 現在の経度での頂点
-//
-//			Vector3 a = AddVector3(MultiplyVector3(Vector3{ cos(lon) * cosLat, sin(lon) * cosLat, sinLat }, sphere.radius), sphere.center);
-//			Vector3 b = AddVector3(MultiplyVector3(Vector3{ cos(nextLon) * cosLat, sin(nextLon) * cosLat, sinLat }, sphere.radius), sphere.center);
-//			Vector3 c = AddVector3(MultiplyVector3(Vector3{ cos(lon) * cosNextLat, sin(lon) * cosNextLat, sinNextLat }, sphere.radius), sphere.center);
-//			Vector3 d = AddVector3(MultiplyVector3(Vector3{ cos(nextLon) * cosNextLat, sin(nextLon) * cosNextLat, sinNextLat }, sphere.radius), sphere.center);
-//
-//			 ワールド座標をスクリーン座標に変換
-//			Vector3 screenA = Transform(Transform(a, viewProjectionMatrix), viewportMatrix);
-//			Vector3 screenB = Transform(Transform(b, viewProjectionMatrix), viewportMatrix);
-//			Vector3 screenC = Transform(Transform(c, viewProjectionMatrix), viewportMatrix);
-//			Vector3 screenD = Transform(Transform(d, viewProjectionMatrix), viewportMatrix);
-//
-//			 ラインを描画
-//			Novice::DrawLine(int(screenA.x), int(screenA.y), int(screenB.x), int(screenB.y), color);
-//			Novice::DrawLine(int(screenA.x), int(screenA.y), int(screenC.x), int(screenC.y), color);
-//			Novice::DrawLine(int(screenB.x), int(screenB.y), int(screenD.x), int(screenD.y), color);
-//			Novice::DrawLine(int(screenC.x), int(screenC.y), int(screenD.x), int(screenD.y), color);
-//		}
-//	}
-//}
 
 void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	const uint32_t kSubDivision = 20;
@@ -686,6 +665,25 @@ Vector3 ClossPoint(const Vector3& point, const Segment& segment) {
 	return AddVector3(segment.origin, MultiplyVector3(segmentDirection, t));
 }
 
+
+
+///
+///球体の衝突判定
+///
+bool IsCollision(const Sphere& s1, const Sphere& s2) {
+	// 2つの球体の中心間の距離を計算
+	float centerDistance = Distance(s1.center, s2.center);
+
+	// 2つの球体の半径の合計
+	float radiusSum = s1.radius + s2.radius;
+
+	// 中心間の距離が半径の合計以下であれば衝突していると判定
+	return centerDistance <= radiusSum;
+}
+
+
+
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -717,20 +715,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
 
 	//円
-	//Sphere sphere{ {0.0f,0.0f,0.0f},1.0f };
-
+	Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
+	Sphere sphere2{ {1.0f,1.0f,0.0f},1.0f };
 
 	//点
-	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
-	Vector3 point{ -1.5f,0.6f,0.6f };
+	//Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	//Vector3 point{ -1.5f,0.6f,0.6f };
 
 	//正射影ベクトルの計算
-	Vector3 project = Project(SubtractVector3(point, segment.origin), segment.diff);
-	//最近接点
-	Vector3 clossPoint = ClossPoint(point, segment);
+	//Vector3 project = Project(SubtractVector3(point, segment.origin), segment.diff);
+	////最近接点
+	//Vector3 clossPoint = ClossPoint(point, segment);
 
-	Sphere pointSphere{ point,0.01f };
-	Sphere clossPointSphere{ clossPoint,0.01f };
+	//Sphere pointSphere{ point,0.01f };
+	//Sphere clossPointSphere{ clossPoint,0.01f };
 
 
 
@@ -771,22 +769,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
 
 		//円の描画
-		DrawSphere(pointSphere, worldViewProjectionMatrix, viewportMatrix, RED);
-		DrawSphere(clossPointSphere, worldViewProjectionMatrix, viewportMatrix, BLACK);
+		if (IsCollision(sphere1, sphere2)) {
+			DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
+		} else {
+			DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		}
+		DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		//線分の描画
-		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
-		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+		//Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 
 
 
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		//ImGui::DragFloat3("SphereCenter", &sphere.center.x, 0.01f);
-		//ImGui::DragFloat3("SphereRadius", &sphere.radius, 0.01f);
-		ImGui::InputFloat3("Project", &project.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		//球体1
+		ImGui::DragFloat3("Sphere1Center", &sphere1.center.x, 0.01f);
+		ImGui::DragFloat3("sphere1", &sphere1.radius, 0.01f);
+		//球体2
+		ImGui::DragFloat3("Sphere2Center", &sphere2.center.x, 0.01f);
+		ImGui::DragFloat3("sphere2", &sphere2.radius, 0.01f);
 		ImGui::End();
 
 
