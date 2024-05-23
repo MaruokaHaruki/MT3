@@ -590,7 +590,7 @@ void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMa
 ///
 
 void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
-	const uint32_t kSubDivision = 20;
+	const uint32_t kSubDivision = 16;
 	const float kLatEvery = float(M_PI) / float(kSubDivision);
 	const float kLonEvery = 2.0f * float(M_PI) / float(kSubDivision);
 
@@ -711,7 +711,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 rotate{ 0.0f,0.0f,0.0f };
 
 	//カメラ行列
-	Vector3 cameraTranslate{ 0.0f,1.9f,-6.49f };
+	Vector3 cameraTranslate{ 0.0f,1.9f,-10.49f };
 	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
 
 	//円
@@ -729,8 +729,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//Sphere pointSphere{ point,0.01f };
 	//Sphere clossPointSphere{ clossPoint,0.01f };
-
-
 
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -780,7 +778,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
 		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
 		//Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
-
 
 
 		ImGui::Begin("Window");
