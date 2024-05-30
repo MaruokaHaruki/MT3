@@ -43,6 +43,10 @@ struct Plane {
 	float distance;//距離
 };
 
+struct Triangle {
+	Vector3 vertics[3];
+};
+
 
 ///-------------------------------
 ///関数の宣言
@@ -651,6 +655,25 @@ void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const 
 
 }
 
+
+///
+///三角形の描画
+///
+void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	// 三角形の各頂点を変換する
+	Vector3 transformedVertices[3];
+	for (int32_t index = 0; index < 3; ++index) {
+		transformedVertices[index] = Transform(Transform(triangle.vertics[index], viewProjectionMatrix), viewportMatrix);
+	}
+
+	// 描画
+	Novice::DrawLine(static_cast<int>( transformedVertices[0].x ), static_cast<int>( transformedVertices[0].y ), static_cast<int>( transformedVertices[1].x ), static_cast<int>( transformedVertices[1].y ), color);
+	Novice::DrawLine(static_cast<int>( transformedVertices[0].x ), static_cast<int>( transformedVertices[0].y ), static_cast<int>( transformedVertices[2].x ), static_cast<int>( transformedVertices[2].y ), color);
+	Novice::DrawLine(static_cast<int>( transformedVertices[1].x ), static_cast<int>( transformedVertices[1].y ), static_cast<int>( transformedVertices[2].x ), static_cast<int>( transformedVertices[2].y ), color);
+}
+
+
+
 ///
 ///球体の衝突判定
 ///
@@ -701,6 +724,46 @@ bool IsLine2Sphere(const Segment& segment, const Plane& plane) {
 	}
 }
 
+///
+///三角形と線の衝突判定
+///
+bool IsTriangle2Line(const Triangle& triangle, const Segment& segment) {
+	Vector3 edge1 = triangle.vertics[1] - triangle.vertics[0];
+	Vector3 edge2 = triangle.vertics[2] - triangle.vertics[0];
+	Vector3 h = Cross(segment.diff, edge2);
+	float a = Dot(edge1, h);
+	if (fabs(a) < 1e-5) {
+		// 線分は三角形の平面と平行
+		return false;
+	}
+
+	float f = 1.0f / a;
+	Vector3 s = segment.origin - triangle.vertics[0];
+	float u = f * Dot(s, h);
+	if (u < 0.0f || u > 1.0f) {
+		return false;
+	}
+
+	Vector3 q = Cross(s, edge1);
+	float v = f * Dot(segment.diff, q);
+	if (v < 0.0f || u + v > 1.0f) {
+		return false;
+	}
+
+	// tは線分のパラメータ、交差点の位置を計算
+	float t = f * Dot(edge2, q);
+	if (t < 0.0f || t > 1.0f) {
+		// 線分の範囲外に交差点がある
+		return false;
+	}
+
+	// 交差点は三角形の内部にある
+	return true;
+}
+
+
+
+
 
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -732,6 +795,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//カメラ行列
 	Vector3 cameraTranslate{ 0.0f,1.9f,-10.49f };
 	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
+	//int lastMouseX = 0;
+	//int lastMouseY = 0;
 
 	//円
 	Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
@@ -754,6 +819,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//Sphere clossPointSphere{ clossPoint,0.01f };
 
 
+	//三角形
+	Triangle triangle;
+	triangle.vertics[0] = { 0.0f,2.0f,0.0f };
+	triangle.vertics[1] = { 2.0f,-2.0f,0.0f };
+	triangle.vertics[2] = { -2.0f,-2.0f,0.0f };
+
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -767,16 +838,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
+		//if (Novice::IsPressMouse(0)) {
+		//	int mouseX, mouseY;
+		//	Novice::GetMousePosition(&mouseX, &mouseY);
+
+		//	// マウスの移動量を計算
+		//	int deltaX = mouseX - lastMouseX;
+		//	int deltaY = mouseY - lastMouseY;
+
+		//	// カメラの回転を更新
+		//	float rotationSpeed = 0.005f;
+		//	cameraRotate.y += deltaX * rotationSpeed;
+		//	cameraRotate.x += deltaY * rotationSpeed;
+		//}
+
 		// 各行列の計算
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotate, translate);
+
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, cameraTranslate);
 		Matrix4x4 viewMatrix = InverseMatrix(cameraMatrix);
+
 		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		//ワールドビューマトリックス
 		Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
 		//ビューポイント
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 		//
+
+
+		
 
 		///
 		/// ↑更新処理ここまで
@@ -806,6 +896,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		//}
 
+		////三角形と線の判定
+		////if (IsTriangle2Line(triangle, segment)) {
+		////	三角形の描画
+		////	DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, RED);
+		////} else {
+		////	DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		////}
+		DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
 
@@ -814,13 +912,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
 		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
 
+		////塩と平面の接触判定
+		//if (IsLine2Sphere(segment, plane)) {
+		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
+		//} else {
+		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		//}
+
 		//塩と平面の接触判定
-		if (IsLine2Sphere(segment,plane)) {
+		if (IsTriangle2Line(triangle, segment)) {
 			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
 		} else {
 			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 		}
-
 
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
@@ -838,7 +942,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat("plane.distance", &plane.distance, 0.01f);
 		//線
 		ImGui::DragFloat3("segment.origin", &segment.origin.x, 0.01f);
-		ImGui::DragFloat3("sphere.diff", &segment.diff.x, 0.01f);
+		ImGui::DragFloat3("segment.diff", &segment.diff.x, 0.01f);
+		//三角形
+		ImGui::DragFloat3("triangle.vertics[0]", &triangle.vertics[0].x, 0.01f);
+		ImGui::DragFloat3("triangle.vertics[1]", &triangle.vertics[1].x, 0.01f);
+		ImGui::DragFloat3("triangle.vertics[2]", &triangle.vertics[2].x, 0.01f);
 		ImGui::End();
 
 
