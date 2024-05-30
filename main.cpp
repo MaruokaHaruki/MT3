@@ -37,6 +37,12 @@ struct Segment {
 	Vector3 diff;
 };
 
+//平面
+struct Plane {
+	Vector3 normal;//法線
+	float distance;//距離
+};
+
 
 ///-------------------------------
 ///関数の宣言
@@ -86,19 +92,15 @@ float Distance(const Vector3& a, const Vector3& b) {
 	return std::sqrt(( a.x - b.x ) * ( a.x - b.x ) + ( a.y - b.y ) * ( a.y - b.y ) + ( a.z - b.z ) * ( a.z - b.z ));
 }
 
-//// ベクトルの正規化を行う関数
-//Vector3 Normalize(const Vector3& v) {
-//	// ベクトルの大きさ（長さ）を計算
-//	float normakize = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-//
-//	// 0除算を避ける
-//	if (normakize == 0) {
-//		return { 0, 0, 0 };
-//	}
-//
-//	// ベクトルを大きさで割って単位ベクトルを得る
-//	return { v.x / normakize, v.y / normakize, v.z / normakize };
-//}
+// ベクトルを正規化
+Vector3 Normalize(const Vector3& v) {
+	float mag = Magnitude(v);
+	if (mag != 0.0f) {
+		return { v.x / mag, v.y / mag, v.z / mag };
+	}
+	// ゼロベクトルの場合はそのまま返す
+	return v;
+}
 
 ///
 ///4x4の計算
@@ -156,7 +158,12 @@ Matrix4x4 MultiplyMatrix(const Matrix4x4& m1, const Matrix4x4& m2) {
 	return result;
 }
 
-// 逆行列を計算する関数
+// 行列の余因子行列を計算するヘルパー関数
+Matrix4x4 CofactorMatrix(const Matrix4x4& matrix);
+
+// 余因子行列の計算に必要なサブ行列を計算するヘルパー関数
+float Minor(const Matrix4x4& matrix, int row, int col);
+
 Matrix4x4 InverseMatrix(const Matrix4x4& matrix) {
 	// 行列式を計算
 	float det =
@@ -185,121 +192,58 @@ Matrix4x4 InverseMatrix(const Matrix4x4& matrix) {
 			matrix.m[1][0] * matrix.m[2][2] * matrix.m[3][1] -
 			matrix.m[1][1] * matrix.m[2][0] * matrix.m[3][2] );
 
-	Matrix4x4 result;
-	// 各要素について余因子を計算して逆行列を出力
-	result.m[0][0] = ( matrix.m[1][1] * matrix.m[2][2] * matrix.m[3][3] +
-		matrix.m[1][2] * matrix.m[2][3] * matrix.m[3][1] +
-		matrix.m[1][3] * matrix.m[2][1] * matrix.m[3][2] -
-		matrix.m[1][3] * matrix.m[2][2] * matrix.m[3][1] -
-		matrix.m[1][1] * matrix.m[2][3] * matrix.m[3][2] -
-		matrix.m[1][2] * matrix.m[2][1] * matrix.m[3][3] ) / det;
+	// 行列式が0の場合は逆行列は存在しない
 
-	result.m[0][1] = ( matrix.m[0][1] * matrix.m[2][3] * matrix.m[3][2] +
-		matrix.m[0][2] * matrix.m[2][1] * matrix.m[3][3] +
-		matrix.m[0][3] * matrix.m[2][2] * matrix.m[3][1] -
-		matrix.m[0][3] * matrix.m[2][1] * matrix.m[3][2] -
-		matrix.m[0][1] * matrix.m[2][2] * matrix.m[3][3] -
-		matrix.m[0][2] * matrix.m[2][3] * matrix.m[3][1] ) / det;
 
-	result.m[0][2] = ( matrix.m[0][1] * matrix.m[1][2] * matrix.m[3][3] +
-		matrix.m[0][2] * matrix.m[1][3] * matrix.m[3][1] +
-		matrix.m[0][3] * matrix.m[1][1] * matrix.m[3][2] -
-		matrix.m[0][3] * matrix.m[1][2] * matrix.m[3][1] -
-		matrix.m[0][1] * matrix.m[1][3] * matrix.m[3][2] -
-		matrix.m[0][2] * matrix.m[1][1] * matrix.m[3][3] ) / det;
+	Matrix4x4 cofactorMatrix = CofactorMatrix(matrix);
+	Matrix4x4 adjugateMatrix;
+	// 余因子行列の転置を求める
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			adjugateMatrix.m[i][j] = cofactorMatrix.m[j][i];
+		}
+	}
 
-	result.m[0][3] = ( matrix.m[0][1] * matrix.m[1][3] * matrix.m[2][2] +
-		matrix.m[0][2] * matrix.m[1][1] * matrix.m[2][3] +
-		matrix.m[0][3] * matrix.m[1][2] * matrix.m[2][1] -
-		matrix.m[0][3] * matrix.m[1][1] * matrix.m[2][2] -
-		matrix.m[0][1] * matrix.m[1][2] * matrix.m[2][3] -
-		matrix.m[0][2] * matrix.m[1][3] * matrix.m[2][1] ) / det;
+	Matrix4x4 inverseMatrix;
+	// 逆行列を求める
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			inverseMatrix.m[i][j] = adjugateMatrix.m[i][j] / det;
+		}
+	}
 
-	result.m[1][0] = ( matrix.m[1][0] * matrix.m[2][2] * matrix.m[3][3] +
-		matrix.m[1][2] * matrix.m[2][3] * matrix.m[3][0] +
-		matrix.m[1][3] * matrix.m[2][0] * matrix.m[3][2] -
-		matrix.m[1][3] * matrix.m[2][2] * matrix.m[3][0] -
-		matrix.m[1][0] * matrix.m[2][3] * matrix.m[3][2] -
-		matrix.m[1][2] * matrix.m[2][0] * matrix.m[3][3] ) / det;
+	return inverseMatrix;
+}
 
-	result.m[1][1] = ( matrix.m[0][0] * matrix.m[2][3] * matrix.m[3][2] +
-		matrix.m[0][2] * matrix.m[2][0] * matrix.m[3][3] +
-		matrix.m[0][3] * matrix.m[2][2] * matrix.m[3][0] -
-		matrix.m[0][3] * matrix.m[2][0] * matrix.m[3][2] -
-		matrix.m[0][0] * matrix.m[2][2] * matrix.m[3][3] -
-		matrix.m[0][2] * matrix.m[2][3] * matrix.m[3][0] ) / det;
+Matrix4x4 CofactorMatrix(const Matrix4x4& matrix) {
+	Matrix4x4 cofactorMatrix;
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			float minor = Minor(matrix, i, j);
+			// 余因子行列の符号付き小行列行列式
+			cofactorMatrix.m[i][j] = ( ( i + j ) % 2 == 0 ? 1 : -1 ) * minor;
+		}
+	}
+	return cofactorMatrix;
+}
 
-	result.m[1][2] = ( matrix.m[0][0] * matrix.m[1][2] * matrix.m[3][3] +
-		matrix.m[0][2] * matrix.m[1][3] * matrix.m[3][0] +
-		matrix.m[0][3] * matrix.m[1][0] * matrix.m[3][2] -
-		matrix.m[0][3] * matrix.m[1][2] * matrix.m[3][0] -
-		matrix.m[0][0] * matrix.m[1][3] * matrix.m[3][2] -
-		matrix.m[0][2] * matrix.m[1][0] * matrix.m[3][3] ) / det;
+float Minor(const Matrix4x4& matrix, int row, int col) {
+	float subMatrix[3][3];
+	int subRow = 0;
+	for (int i = 0; i < 4; i++) {
+		if (i == row) continue;
+		int subCol = 0;
+		for (int j = 0; j < 4; j++) {
+			if (j == col) continue;
+			subMatrix[subRow][subCol] = matrix.m[i][j];
+			subCol++;
+		}
+		subRow++;
+	}
 
-	result.m[1][3] = ( matrix.m[0][0] * matrix.m[1][3] * matrix.m[2][2] +
-		matrix.m[0][2] * matrix.m[1][0] * matrix.m[2][3] +
-		matrix.m[0][3] * matrix.m[1][2] * matrix.m[2][0] -
-		matrix.m[0][3] * matrix.m[1][0] * matrix.m[2][2] -
-		matrix.m[0][0] * matrix.m[1][2] * matrix.m[2][3] -
-		matrix.m[0][2] * matrix.m[1][3] * matrix.m[2][0] ) / det;
-
-	result.m[2][0] = ( matrix.m[1][0] * matrix.m[2][1] * matrix.m[3][3] +
-		matrix.m[1][1] * matrix.m[2][3] * matrix.m[3][0] +
-		matrix.m[1][3] * matrix.m[2][0] * matrix.m[3][1] -
-		matrix.m[1][3] * matrix.m[2][1] * matrix.m[3][0] -
-		matrix.m[1][0] * matrix.m[2][3] * matrix.m[3][1] -
-		matrix.m[1][1] * matrix.m[2][0] * matrix.m[3][3] ) / det;
-
-	result.m[2][1] = ( matrix.m[0][0] * matrix.m[2][3] * matrix.m[3][1] +
-		matrix.m[0][1] * matrix.m[2][0] * matrix.m[3][3] +
-		matrix.m[0][3] * matrix.m[2][1] * matrix.m[3][0] -
-		matrix.m[0][3] * matrix.m[2][0] * matrix.m[3][1] -
-		matrix.m[0][0] * matrix.m[2][1] * matrix.m[3][3] -
-		matrix.m[0][1] * matrix.m[2][3] * matrix.m[3][0] ) / det;
-
-	result.m[2][2] = ( matrix.m[0][0] * matrix.m[1][1] * matrix.m[3][3] +
-		matrix.m[0][1] * matrix.m[1][3] * matrix.m[3][0] +
-		matrix.m[0][3] * matrix.m[1][0] * matrix.m[3][1] -
-		matrix.m[0][3] * matrix.m[1][1] * matrix.m[3][0] -
-		matrix.m[0][0] * matrix.m[1][3] * matrix.m[3][1] -
-		matrix.m[0][1] * matrix.m[1][0] * matrix.m[3][3] ) / det;
-
-	result.m[2][3] = ( matrix.m[0][0] * matrix.m[1][3] * matrix.m[2][1] +
-		matrix.m[0][1] * matrix.m[1][0] * matrix.m[2][3] +
-		matrix.m[0][3] * matrix.m[1][1] * matrix.m[2][0] -
-		matrix.m[0][3] * matrix.m[1][0] * matrix.m[2][1] -
-		matrix.m[0][0] * matrix.m[1][1] * matrix.m[2][3] -
-		matrix.m[0][1] * matrix.m[1][3] * matrix.m[2][0] ) / det;
-
-	result.m[3][0] = ( matrix.m[1][0] * matrix.m[2][2] * matrix.m[3][1] +
-		matrix.m[1][1] * matrix.m[2][0] * matrix.m[3][2] +
-		matrix.m[1][2] * matrix.m[2][1] * matrix.m[3][0] -
-		matrix.m[1][2] * matrix.m[2][0] * matrix.m[3][1] -
-		matrix.m[1][0] * matrix.m[2][1] * matrix.m[3][2] -
-		matrix.m[1][1] * matrix.m[2][2] * matrix.m[3][0] ) / det;
-
-	result.m[3][1] = ( matrix.m[0][0] * matrix.m[2][1] * matrix.m[3][2] +
-		matrix.m[0][1] * matrix.m[2][2] * matrix.m[3][0] +
-		matrix.m[0][2] * matrix.m[2][0] * matrix.m[3][1] -
-		matrix.m[0][2] * matrix.m[2][1] * matrix.m[3][0] -
-		matrix.m[0][0] * matrix.m[2][2] * matrix.m[3][1] -
-		matrix.m[0][1] * matrix.m[2][0] * matrix.m[3][2] ) / det;
-
-	result.m[3][2] = ( matrix.m[0][0] * matrix.m[1][2] * matrix.m[3][1] +
-		matrix.m[0][1] * matrix.m[1][0] * matrix.m[3][2] +
-		matrix.m[0][2] * matrix.m[1][1] * matrix.m[3][0] -
-		matrix.m[0][2] * matrix.m[1][0] * matrix.m[3][1] -
-		matrix.m[0][0] * matrix.m[1][1] * matrix.m[3][2] -
-		matrix.m[0][1] * matrix.m[1][2] * matrix.m[3][0] ) / det;
-
-	result.m[3][3] = ( matrix.m[0][0] * matrix.m[1][1] * matrix.m[2][2] +
-		matrix.m[0][1] * matrix.m[1][2] * matrix.m[2][0] +
-		matrix.m[0][2] * matrix.m[1][0] * matrix.m[2][1] -
-		matrix.m[0][2] * matrix.m[1][1] * matrix.m[2][0] -
-		matrix.m[0][0] * matrix.m[1][2] * matrix.m[2][1] -
-		matrix.m[0][1] * matrix.m[1][0] * matrix.m[2][2] ) / det;
-
-	return result;
+	return subMatrix[0][0] * ( subMatrix[1][1] * subMatrix[2][2] - subMatrix[1][2] * subMatrix[2][1] ) -
+		subMatrix[0][1] * ( subMatrix[1][0] * subMatrix[2][2] - subMatrix[1][2] * subMatrix[2][0] ) +
+		subMatrix[0][2] * ( subMatrix[1][0] * subMatrix[2][1] - subMatrix[1][1] * subMatrix[2][0] );
 }
 
 //5.転置行列
@@ -665,7 +609,47 @@ Vector3 ClossPoint(const Vector3& point, const Segment& segment) {
 	return AddVector3(segment.origin, MultiplyVector3(segmentDirection, t));
 }
 
+///
+///平面の描画
+///
+Vector3 Perpendicular(const Vector3& vector) {
+	if (vector.x != 0.0f || vector.y != 0.0f) {
+		return { -vector.y , vector.x,0.0f };
+	}
+	return { 0.0f,-vector.z,vector.y };
+}
 
+void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	//1
+	Vector3 center = MultiplyVector3(plane.normal, plane.distance);
+	Vector3 perpendiculars[4];
+	//2
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));
+	//3
+	perpendiculars[1] = { -perpendiculars[0].x,-perpendiculars[0].z };
+	//4
+	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);
+	//5
+	perpendiculars[3] = { -perpendiculars[2].x,-perpendiculars[2].y,-perpendiculars[2].z };
+	//6
+	Vector3 points[4];
+	for (int32_t index = 0; index < 4; ++index) {
+		Vector3 extend = MultiplyVector3(perpendiculars[index], 2.0f);
+		Vector3 point = AddVector3(center, extend);
+		points[index] = Transform(Transform(point, viewProjectionMatrix), viewportMatrix);
+	}
+	//描画
+	Novice::DrawLine(static_cast<int>( points[0].x ), static_cast<int>( points[0].y ), static_cast<int>( points[1].x ), static_cast<int>( points[1].y ), color);
+	Novice::DrawLine(static_cast<int>( points[0].x ), static_cast<int>( points[0].y ), static_cast<int>( points[2].x ), static_cast<int>( points[2].y ), color);
+	Novice::DrawLine(static_cast<int>( points[0].x ), static_cast<int>( points[0].y ), static_cast<int>( points[3].x ), static_cast<int>( points[3].y ), color);
+
+	Novice::DrawLine(static_cast<int>( points[1].x ), static_cast<int>( points[1].y ), static_cast<int>( points[2].x ), static_cast<int>( points[2].y ), color);
+	Novice::DrawLine(static_cast<int>( points[1].x ), static_cast<int>( points[1].y ), static_cast<int>( points[3].x ), static_cast<int>( points[3].y ), color);
+
+	Novice::DrawLine(static_cast<int>( points[2].x ), static_cast<int>( points[2].y ), static_cast<int>( points[3].x ), static_cast<int>( points[3].y ), color);
+	Novice::DrawLine(static_cast<int>( points[3].x ), static_cast<int>( points[3].y ), static_cast<int>( points[0].x ), static_cast<int>( points[0].y ), color);
+
+}
 
 ///
 ///球体の衝突判定
@@ -681,6 +665,41 @@ bool IsCollision(const Sphere& s1, const Sphere& s2) {
 	return centerDistance <= radiusSum;
 }
 
+///
+///球体と平面の衝突判定
+/// 
+bool IsSphere2PlaneCollision(const Sphere& sphere, const Plane& plane) {
+	// 球体の中心から平面までの距離を計算
+	float distance = Dot(plane.normal, sphere.center) - plane.distance;
+	// 距離が球体の半径以内であれば衝突している
+	return fabs(distance) <= sphere.radius;
+}
+
+///
+///線と平面の衝突判定
+///
+
+bool IsLine2Sphere(const Segment& segment, const Plane& plane) {
+	//垂直判定を行うために、法線と線の内積を求める
+	float dot = Dot(plane.normal, segment.diff);
+
+	//垂直=並行であるので、衝突しているはずがない
+	if (dot == 0.0f) {
+		return false;
+	}
+
+	//tを求める
+	float t = ( plane.distance - Dot(segment.origin, plane.normal) ) / dot;
+
+	// tの値と線の種類によって衝突しているかを判定する
+	if (t >= 0.0f && t <= 1.0f) {
+		// 線分が平面と交差している
+		return true;
+	} else {
+		// 線分が平面と交差していない
+		return false;
+	}
+}
 
 
 
@@ -718,8 +737,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
 	Sphere sphere2{ {1.0f,1.0f,0.0f},1.0f };
 
+	//平面
+	Plane plane{ {0.0f,1.0f,0.0f}, { 0.0f } };
+
+
 	//点
-	//Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
 	//Vector3 point{ -1.5f,0.6f,0.6f };
 
 	//正射影ベクトルの計算
@@ -763,21 +786,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
+		//平面の描画
+		DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+		////円の描画
+		//if (IsCollision(sphere1, sphere2)) {
+		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
+		//} else {
+		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//}
+		//DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
 		//Gridの描画
+
+		////塩と平面の接触判定
+		//if (IsSphere2PlaneCollision(sphere1, plane)) {
+		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
+		//} else {
+		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//}
+
+
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
 
-		//円の描画
-		if (IsCollision(sphere1, sphere2)) {
-			DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
-		} else {
-			DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
-		}
-		DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		//線分の描画
-		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
-		//Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+
+		//塩と平面の接触判定
+		if (IsLine2Sphere(segment,plane)) {
+			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
+		} else {
+			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		}
 
 
 		ImGui::Begin("Window");
@@ -789,6 +831,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//球体2
 		ImGui::DragFloat3("Sphere2Center", &sphere2.center.x, 0.01f);
 		ImGui::DragFloat3("sphere2", &sphere2.radius, 0.01f);
+		//平面
+		ImGui::DragFloat3("plane.normal", &plane.normal.x, 0.01f);
+		//NOTE:法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
+		plane.normal = Normalize(plane.normal);
+		ImGui::DragFloat("plane.distance", &plane.distance, 0.01f);
+		//線
+		ImGui::DragFloat3("segment.origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("sphere.diff", &segment.diff.x, 0.01f);
 		ImGui::End();
 
 
