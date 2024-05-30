@@ -610,33 +610,6 @@ Vector3 ClossPoint(const Vector3& point, const Segment& segment) {
 }
 
 ///
-///球体の衝突判定
-///
-bool IsCollision(const Sphere& s1, const Sphere& s2) {
-	// 2つの球体の中心間の距離を計算
-	float centerDistance = Distance(s1.center, s2.center);
-
-	// 2つの球体の半径の合計
-	float radiusSum = s1.radius + s2.radius;
-
-	// 中心間の距離が半径の合計以下であれば衝突していると判定
-	return centerDistance <= radiusSum;
-}
-
-///
-///球体と円の衝突判定
-/// 
-bool IsSphere2PlaneCollision(const Sphere& sphere, const Plane& plane) {
-	// 球体の中心から平面までの距離を計算
-	float distance = Dot(plane.normal, sphere.center) - plane.distance;
-	// 距離が球体の半径以内であれば衝突している
-	return fabs(distance) <= sphere.radius;
-}
-
-
-
-
-///
 ///平面の描画
 ///
 Vector3 Perpendicular(const Vector3& vector) {
@@ -676,6 +649,56 @@ void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const 
 	Novice::DrawLine(static_cast<int>( points[2].x ), static_cast<int>( points[2].y ), static_cast<int>( points[3].x ), static_cast<int>( points[3].y ), color);
 	Novice::DrawLine(static_cast<int>( points[3].x ), static_cast<int>( points[3].y ), static_cast<int>( points[0].x ), static_cast<int>( points[0].y ), color);
 
+}
+
+///
+///球体の衝突判定
+///
+bool IsCollision(const Sphere& s1, const Sphere& s2) {
+	// 2つの球体の中心間の距離を計算
+	float centerDistance = Distance(s1.center, s2.center);
+
+	// 2つの球体の半径の合計
+	float radiusSum = s1.radius + s2.radius;
+
+	// 中心間の距離が半径の合計以下であれば衝突していると判定
+	return centerDistance <= radiusSum;
+}
+
+///
+///球体と平面の衝突判定
+/// 
+bool IsSphere2PlaneCollision(const Sphere& sphere, const Plane& plane) {
+	// 球体の中心から平面までの距離を計算
+	float distance = Dot(plane.normal, sphere.center) - plane.distance;
+	// 距離が球体の半径以内であれば衝突している
+	return fabs(distance) <= sphere.radius;
+}
+
+///
+///線と平面の衝突判定
+///
+
+bool IsLine2Sphere(const Segment& segment, const Plane& plane) {
+	//垂直判定を行うために、法線と線の内積を求める
+	float dot = Dot(plane.normal, segment.diff);
+
+	//垂直=並行であるので、衝突しているはずがない
+	if (dot == 0.0f) {
+		return false;
+	}
+
+	//tを求める
+	float t = ( plane.distance - Dot(segment.origin, plane.normal) ) / dot;
+
+	// tの値と線の種類によって衝突しているかを判定する
+	if (t >= 0.0f && t <= 1.0f) {
+		// 線分が平面と交差している
+		return true;
+	} else {
+		// 線分が平面と交差していない
+		return false;
+	}
 }
 
 
@@ -719,7 +742,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	//点
-	//Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
 	//Vector3 point{ -1.5f,0.6f,0.6f };
 
 	//正射影ベクトルの計算
@@ -766,16 +789,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//平面の描画
 		DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
-		//塩と平面の接触判定
-		if (IsSphere2PlaneCollision(sphere1, plane)) {
-			DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
-		} else {
-			DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
-		}
-
-		//Gridの描画
-		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
-
 		////円の描画
 		//if (IsCollision(sphere1, sphere2)) {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
@@ -784,10 +797,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//}
 		//DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
+		//Gridの描画
+
+		////塩と平面の接触判定
+		//if (IsSphere2PlaneCollision(sphere1, plane)) {
+		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
+		//} else {
+		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//}
+
+
+		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
+
+
 		//線分の描画
-		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
-		//Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+
+		//塩と平面の接触判定
+		if (IsLine2Sphere(segment,plane)) {
+			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
+		} else {
+			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		}
+
 
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
@@ -803,6 +836,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//NOTE:法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
 		plane.normal = Normalize(plane.normal);
 		ImGui::DragFloat("plane.distance", &plane.distance, 0.01f);
+		//線
+		ImGui::DragFloat3("segment.origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("sphere.diff", &segment.diff.x, 0.01f);
 		ImGui::End();
 
 
