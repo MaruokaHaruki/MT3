@@ -889,12 +889,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 
+		/// ===デバックカメラ起動=== ///
+		// デバッグカメラが有効になっている場合、マウスの動きによってカメラを回転させる
 		if (IsDebugCameraActive) {
 			Novice::GetMousePosition(&mouseX, &mouseY);
 
 			if (Novice::IsPressMouse(0)) {
-				
-
 				// マウスの移動量を計算
 				int deltaX = mouseX - lastMouseX;
 				int deltaY = mouseY - lastMouseY;
@@ -909,13 +909,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				Matrix4x4 rotationMatrix = MakeRotateMatrix(cameraRotate);
 				Vector3 offset = { 0.0f, 0.0f, -distance };
 				cameraTranslate = cameraTarget.center + Transform(offset, rotationMatrix);
-
-
 			}
+
 			// マウスの位置を更新
 			lastMouseX = mouseX;
 			lastMouseY = mouseY;
-
 		}
 
 
