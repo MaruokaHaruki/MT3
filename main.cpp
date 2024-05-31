@@ -106,6 +106,11 @@ Vector3 Normalize(const Vector3& v) {
 	return v;
 }
 
+// Length 関数の実装
+float Length(const Vector3& v) {
+	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
 ///
 ///4x4の計算
 ///
@@ -364,6 +369,15 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
 	return result;
 }
 
+Matrix4x4 MakeRotateMatrix(const Vector3& rotate) {
+	Matrix4x4 rx = MakeRotateXMatrix(rotate.x);
+	Matrix4x4 ry = MakeRotateYMatrix(rotate.y);
+	Matrix4x4 rz = MakeRotateZMatrix(rotate.z);
+
+	// 回転行列の掛け合わせ順序はY, X, Zとする
+	return MultiplyMatrix(ry, MultiplyMatrix(rx, rz));
+}
+
 // 座標変換を行う関数
 Vector3 Transform(const Vector3& vector, const Matrix4x4& matrix) {
 	Vector3 result;
@@ -462,6 +476,10 @@ Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, f
 	return result;
 }
 #pragma endregion
+
+
+
+
 
 ///
 ///クロス積
@@ -761,7 +779,23 @@ bool IsTriangle2Line(const Triangle& triangle, const Segment& segment) {
 	return true;
 }
 
+///
+///カメラの位置
+///
+Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
+	Vector3 zaxis = Normalize(target - eye);    // 前方向ベクトル
+	Vector3 xaxis = Normalize(Cross(up, zaxis)); // 右方向ベクトル
+	Vector3 yaxis = Cross(zaxis, xaxis);        // 上方向ベクトル
 
+	Matrix4x4 viewMatrix = {
+		xaxis.x, yaxis.x, zaxis.x, 0,
+		xaxis.y, yaxis.y, zaxis.y, 0,
+		xaxis.z, yaxis.z, zaxis.z, 0,
+		-Dot(xaxis, eye), -Dot(yaxis, eye), -Dot(zaxis, eye), 1
+	};
+
+	return viewMatrix;
+}
 
 
 
@@ -792,11 +826,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 translate{ 0.0f,0.0f,0.0f };
 	Vector3 rotate{ 0.0f,0.0f,0.0f };
 
-	//カメラ行列
-	Vector3 cameraTranslate{ 0.0f,1.9f,-10.49f };
-	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
-	//int lastMouseX = 0;
-	//int lastMouseY = 0;
+	// カメラ行列
+	Vector3 cameraTranslate{ 0.0f, 1.9f, -10.49f };
+	Vector3 cameraRotate{ 0.26f, 0.0f, 0.0f };
+	Sphere cameraTarget;
+	cameraTarget.center = { 0.0f, 0.0f, 0.0f }; // カメラのターゲットポイント
+	cameraTarget.radius = 0.01f;
+	
+	int lastMouseX = 0;
+	int lastMouseY = 0;
+	int mouseX = 0;
+	int mouseY = 0;
+	bool IsDebugCameraActive = false;
 
 	//円
 	Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
@@ -838,35 +879,103 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
-		//if (Novice::IsPressMouse(0)) {
-		//	int mouseX, mouseY;
-		//	Novice::GetMousePosition(&mouseX, &mouseY);
+		/// ===デバックカメラ起動=== ///
+		if (Novice::CheckHitKey(DIK_SPACE)) {
+			if (IsDebugCameraActive) {
+				IsDebugCameraActive = false;
+			} else {
+				IsDebugCameraActive = true;
+			}
+		}
 
-		//	// マウスの移動量を計算
-		//	int deltaX = mouseX - lastMouseX;
-		//	int deltaY = mouseY - lastMouseY;
 
-		//	// カメラの回転を更新
-		//	float rotationSpeed = 0.005f;
-		//	cameraRotate.y += deltaX * rotationSpeed;
-		//	cameraRotate.x += deltaY * rotationSpeed;
-		//}
+		if (IsDebugCameraActive) {
+			Novice::GetMousePosition(&mouseX, &mouseY);
+
+			if (Novice::IsPressMouse(0)) {
+				
+
+				// マウスの移動量を計算
+				int deltaX = mouseX - lastMouseX;
+				int deltaY = mouseY - lastMouseY;
+
+				// カメラの回転を更新
+				float rotationSpeed = 0.005f;
+				cameraRotate.y += deltaX * rotationSpeed;
+				cameraRotate.x += deltaY * rotationSpeed;
+
+				// カメラの位置をターゲットポイントの周りに回転
+				float distance = Length(cameraTranslate - cameraTarget.center);
+				Matrix4x4 rotationMatrix = MakeRotateMatrix(cameraRotate);
+				Vector3 offset = { 0.0f, 0.0f, -distance };
+				cameraTranslate = cameraTarget.center + Transform(offset, rotationMatrix);
+
+
+			}
+			// マウスの位置を更新
+			lastMouseX = mouseX;
+			lastMouseY = mouseY;
+
+		}
+
+
 
 		// 各行列の計算
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotate, translate);
-
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, cameraTranslate);
-		Matrix4x4 viewMatrix = InverseMatrix(cameraMatrix);
 
+
+		Matrix4x4 viewMatrix = LookAt(cameraTranslate, cameraTarget.center, { 0.0f, 1.0f, 0.0f });
 		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
-		//ワールドビューマトリックス
 		Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
-		//ビューポイント
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
+
+		//Matrix4x4 viewMatrix = InverseMatrix(cameraMatrix);
+		//Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
+		////ワールドビューマトリックス
+		//Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
+		////ビューポイント
+		//Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 		//
 
 
-		
+
+		ImGui::Begin("Window");
+
+		// カメラ関連
+		ImGui::Text("Camera Settings");
+		ImGui::Text("Press SPACE is DebugCameraActive");
+		ImGui::Separator();
+		ImGui::Spacing();
+		ImGui::DragFloat3("Camera Translate", &cameraTranslate.x, 0.01f);
+		ImGui::DragFloat3("Camera Rotate", &cameraRotate.x, 0.01f);
+		ImGui::DragFloat3("Camera Target", &cameraTarget.center.x, 0.01f); // ターゲットポイントの調整
+
+		// オブジェクト関連
+		ImGui::Spacing();
+		ImGui::Text("Object Settings");
+		ImGui::Separator();
+		ImGui::Spacing();
+		// 球体1
+		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
+		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
+		// 球体2
+		ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
+		ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
+		// 平面
+		ImGui::DragFloat3("Plane Normal", &plane.normal.x, 0.01f);
+		// NOTE: 法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
+		plane.normal = Normalize(plane.normal);
+		ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
+		// 線
+		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
+		// 三角形
+		ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
+		ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
+		ImGui::DragFloat3("Triangle Vertex 3", &triangle.vertics[2].x, 0.01f);
+
+		ImGui::End();
 
 		///
 		/// ↑更新処理ここまで
@@ -878,6 +987,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//平面の描画
 		DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+		//中心の描画
+		DrawSphere(cameraTarget, worldViewProjectionMatrix, viewportMatrix, RED);
 
 		////円の描画
 		//if (IsCollision(sphere1, sphere2)) {
@@ -925,30 +1037,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		} else {
 			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 		}
-
-		ImGui::Begin("Window");
-		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
-		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		//球体1
-		ImGui::DragFloat3("Sphere1Center", &sphere1.center.x, 0.01f);
-		ImGui::DragFloat3("sphere1", &sphere1.radius, 0.01f);
-		//球体2
-		ImGui::DragFloat3("Sphere2Center", &sphere2.center.x, 0.01f);
-		ImGui::DragFloat3("sphere2", &sphere2.radius, 0.01f);
-		//平面
-		ImGui::DragFloat3("plane.normal", &plane.normal.x, 0.01f);
-		//NOTE:法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
-		plane.normal = Normalize(plane.normal);
-		ImGui::DragFloat("plane.distance", &plane.distance, 0.01f);
-		//線
-		ImGui::DragFloat3("segment.origin", &segment.origin.x, 0.01f);
-		ImGui::DragFloat3("segment.diff", &segment.diff.x, 0.01f);
-		//三角形
-		ImGui::DragFloat3("triangle.vertics[0]", &triangle.vertics[0].x, 0.01f);
-		ImGui::DragFloat3("triangle.vertics[1]", &triangle.vertics[1].x, 0.01f);
-		ImGui::DragFloat3("triangle.vertics[2]", &triangle.vertics[2].x, 0.01f);
-		ImGui::End();
-
 
 
 		///
