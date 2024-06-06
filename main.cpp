@@ -47,10 +47,18 @@ struct Triangle {
 	Vector3 vertics[3];
 };
 
+//AABB(Axis Aligned Bounding Box)
+struct AABB {
+	Vector3 min;
+	Vector3 max;
+};
+
 
 ///-------------------------------
 ///関数の宣言
 ///-------------------------------
+#pragma region 関数の宣言
+
 //ベクター3描画
 static const int kColumnWidth = 60;
 void Vector3ScreenPrintf(uint32_t x, uint32_t y, Vector3 v, const char* label) {
@@ -110,6 +118,8 @@ Vector3 Normalize(const Vector3& v) {
 float Length(const Vector3& v) {
 	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
+
+#pragma endregion
 
 ///
 ///4x4の計算
@@ -477,10 +487,6 @@ Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, f
 }
 #pragma endregion
 
-
-
-
-
 ///
 ///クロス積
 ///
@@ -690,6 +696,46 @@ void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatri
 	Novice::DrawLine(static_cast<int>( transformedVertices[1].x ), static_cast<int>( transformedVertices[1].y ), static_cast<int>( transformedVertices[2].x ), static_cast<int>( transformedVertices[2].y ), color);
 }
 
+///
+/// AABBの描画
+///
+void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	// 8頂点の算出
+	Vector3 vertices[8] = {
+		{aabb.min.x, aabb.min.y, aabb.min.z},  // 0
+		{aabb.max.x, aabb.min.y, aabb.min.z},  // 1
+		{aabb.min.x, aabb.max.y, aabb.min.z},  // 2
+		{aabb.max.x, aabb.max.y, aabb.min.z},  // 3
+		{aabb.min.x, aabb.min.y, aabb.max.z},  // 4
+		{aabb.max.x, aabb.min.y, aabb.max.z},  // 5
+		{aabb.min.x, aabb.max.y, aabb.max.z},  // 6
+		{aabb.max.x, aabb.max.y, aabb.max.z}   // 7
+	};
+
+	// 頂点の変換
+	Vector3 transformedVertices[8];
+	for (int i = 0; i < 8; ++i) {
+		transformedVertices[i] = Transform(Transform(vertices[i], viewProjectionMatrix), viewportMatrix);
+	}
+
+	// 描画
+	int indices[12][2] = {
+		{0, 1}, {1, 3}, {3, 2}, {2, 0}, // 下の面
+		{4, 5}, {5, 7}, {7, 6}, {6, 4}, // 上の面
+		{0, 4}, {1, 5}, {2, 6}, {3, 7}  // 側面
+	};
+
+	for (int i = 0; i < 12; ++i) {
+		int v0 = indices[i][0];
+		int v1 = indices[i][1];
+		Novice::DrawLine(
+			static_cast<int>( transformedVertices[v0].x ), static_cast<int>( transformedVertices[v0].y ),
+			static_cast<int>( transformedVertices[v1].x ), static_cast<int>( transformedVertices[v1].y ),
+			color
+		);
+	}
+}
+
 
 
 ///
@@ -780,6 +826,31 @@ bool IsTriangle2Line(const Triangle& triangle, const Segment& segment) {
 }
 
 ///
+///aabbとaabbの判定
+///
+bool IsAABB2AABBCollision(const AABB& aabb1, const AABB& aabb2) {
+	// X軸の範囲が重なっているか判定
+	if (aabb1.max.x < aabb2.min.x || aabb1.min.x > aabb2.max.x) {
+		return false;
+	}
+
+	// Y軸の範囲が重なっているか判定
+	if (aabb1.max.y < aabb2.min.y || aabb1.min.y > aabb2.max.y) {
+		return false;
+	}
+
+	// Z軸の範囲が重なっているか判定
+	if (aabb1.max.z < aabb2.min.z || aabb1.min.z > aabb2.max.z) {
+		return false;
+	}
+
+	// すべての条件を満たす場合、AABBは重なっている
+	return true;
+}
+
+
+
+///
 ///カメラの位置
 ///
 Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
@@ -796,6 +867,8 @@ Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
 
 	return viewMatrix;
 }
+
+
 
 
 
@@ -832,7 +905,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Sphere cameraTarget;
 	cameraTarget.center = { 0.0f, 0.0f, 0.0f }; // カメラのターゲットポイント
 	cameraTarget.radius = 0.01f;
-	
+
 	int lastMouseX = 0;
 	int lastMouseY = 0;
 	int mouseX = 0;
@@ -840,15 +913,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	bool IsDebugCameraActive = false;
 
 	//円
-	Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
-	Sphere sphere2{ {1.0f,1.0f,0.0f},1.0f };
+	//Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
+	//Sphere sphere2{ {1.0f,1.0f,0.0f},1.0f };
 
 	//平面
-	Plane plane{ {0.0f,1.0f,0.0f}, { 0.0f } };
-
+	//Plane plane{ {0.0f,1.0f,0.0f}, { 0.0f } };
 
 	//点
-	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	//Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
 	//Vector3 point{ -1.5f,0.6f,0.6f };
 
 	//正射影ベクトルの計算
@@ -859,12 +931,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//Sphere pointSphere{ point,0.01f };
 	//Sphere clossPointSphere{ clossPoint,0.01f };
 
-
 	//三角形
-	Triangle triangle;
-	triangle.vertics[0] = { 0.0f,2.0f,0.0f };
-	triangle.vertics[1] = { 2.0f,-2.0f,0.0f };
-	triangle.vertics[2] = { -2.0f,-2.0f,0.0f };
+	//Triangle triangle;
+	//triangle.vertics[0] = { 0.0f,2.0f,0.0f };
+	//triangle.vertics[1] = { 2.0f,-2.0f,0.0f };
+	//triangle.vertics[2] = { -2.0f,-2.0f,0.0f };
+
+	//aabbの初期値
+	AABB aabb1{
+		{-0.5f,-0.5f,-0.5f},
+		{0.0f,0.0f,0.0f},
+	};
+	AABB aabb2{
+		{0.2f,0.2f,0.2f},
+		{1.0f,1.0f,1.0f},
+	};
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -916,9 +997,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			lastMouseY = mouseY;
 		}
 
-
-
-		// 各行列の計算
+		/// ===各行列の計算=== ///
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotate, translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, cameraTranslate);
 
@@ -928,6 +1007,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
+
 		//Matrix4x4 viewMatrix = InverseMatrix(cameraMatrix);
 		//Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		////ワールドビューマトリックス
@@ -935,8 +1015,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		////ビューポイント
 		//Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 		//
-
-
 
 		ImGui::Begin("Window");
 
@@ -955,23 +1033,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Separator();
 		ImGui::Spacing();
 		// 球体1
-		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
-		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
+		//ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
+		//ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
 		// 球体2
-		ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
-		ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
+		//ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
+		//ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
 		// 平面
-		ImGui::DragFloat3("Plane Normal", &plane.normal.x, 0.01f);
+		//ImGui::DragFloat3("Plane Normal", &plane.normal.x, 0.01f);
 		// NOTE: 法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
-		plane.normal = Normalize(plane.normal);
-		ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
+		//plane.normal = Normalize(plane.normal);
+		//ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
 		// 線
-		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
-		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
+		//ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
+		//ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
 		// 三角形
-		ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
-		ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
-		ImGui::DragFloat3("Triangle Vertex 3", &triangle.vertics[2].x, 0.01f);
+		//ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
+		//ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
+		//ImGui::DragFloat3("Triangle Vertex 3", &triangle.vertics[2].x, 0.01f);
+		//AABB
+		ImGui::DragFloat3("AABB1", &aabb1.max.x, 0.01f);
+		ImGui::DragFloat3("AABB1", &aabb1.min.x, 0.01f);
 
 		ImGui::End();
 
@@ -983,11 +1064,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
+		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
+
+
+		///aabbの描画
+		//1
+		if (IsAABB2AABBCollision(aabb1, aabb2)) {
+			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, RED);
+		} else {
+			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		}
+		//2
+		DrawAABB(aabb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
 		//平面の描画
-		DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		//中心の描画
-		DrawSphere(cameraTarget, worldViewProjectionMatrix, viewportMatrix, RED);
+		//DrawSphere(cameraTarget, worldViewProjectionMatrix, viewportMatrix, RED);
 
 		////円の描画
 		//if (IsCollision(sphere1, sphere2)) {
@@ -1013,14 +1107,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		////} else {
 		////	DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		////}
-		DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
-
-		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
+		//DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 
 		//線分の描画
-		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
 
 		////塩と平面の接触判定
 		//if (IsLine2Sphere(segment, plane)) {
@@ -1030,11 +1122,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//}
 
 		//塩と平面の接触判定
-		if (IsTriangle2Line(triangle, segment)) {
-			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
-		} else {
-			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
-		}
+		//if (IsTriangle2Line(triangle, segment)) {
+		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
+		//} else {
+		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		//}
 
 
 		///
