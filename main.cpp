@@ -848,6 +848,23 @@ bool IsAABB2AABBCollision(const AABB& aabb1, const AABB& aabb2) {
 	return true;
 }
 
+///
+///aabbと球体の当たり判定
+///
+bool IsAABB2SphereCollision(const AABB& aabb, const Sphere& sphere) {
+	// 球体の中心からAABBの範囲内で最も近い点を計算
+	float closestX = std::max(aabb.min.x, std::min(sphere.center.x, aabb.max.x));
+	float closestY = std::max(aabb.min.y, std::min(sphere.center.y, aabb.max.y));
+	float closestZ = std::max(aabb.min.z, std::min(sphere.center.z, aabb.max.z));
+
+	// 最近接点と球体の中心の距離の二乗を計算
+	float distanceSquared = ( closestX - sphere.center.x ) * ( closestX - sphere.center.x )
+		+ ( closestY - sphere.center.y ) * ( closestY - sphere.center.y )
+		+ ( closestZ - sphere.center.z ) * ( closestZ - sphere.center.z );
+
+	// 距離の二乗が球体の半径の二乗以下であれば衝突している
+	return distanceSquared <= sphere.radius * sphere.radius;
+}
 
 
 ///
@@ -912,8 +929,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int mouseY = 0;
 	bool IsDebugCameraActive = false;
 
-	//円
-	//Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
+	//球体
+	Sphere sphere1{ {0.0f,5.0f,0.0f},1.0f };
 	//Sphere sphere2{ {1.0f,1.0f,0.0f},1.0f };
 
 	//平面
@@ -942,10 +959,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{-0.5f,-0.5f,-0.5f},
 		{0.0f,0.0f,0.0f},
 	};
-	AABB aabb2{
-		{0.2f,0.2f,0.2f},
-		{1.0f,1.0f,1.0f},
-	};
+	//AABB aabb2{
+	//	{0.2f,0.2f,0.2f},
+	//	{1.0f,1.0f,1.0f},
+	//};
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1033,8 +1050,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Separator();
 		ImGui::Spacing();
 		// 球体1
-		//ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
-		//ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
+		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
+		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
 		// 球体2
 		//ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
 		//ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
@@ -1065,29 +1082,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(worldViewProjectionMatrix, viewportMatrix);
-
+		//中心の描画
+		DrawSphere(cameraTarget, worldViewProjectionMatrix, viewportMatrix, RED);
 
 		///aabbの描画
 		//1
-		if (IsAABB2AABBCollision(aabb1, aabb2)) {
+		if (IsAABB2SphereCollision(aabb1,sphere1)) {
 			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, RED);
 		} else {
 			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		}
+
 		//2
-		DrawAABB(aabb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawAABB(aabb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		//平面の描画
 		//DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
-		//中心の描画
-		//DrawSphere(cameraTarget, worldViewProjectionMatrix, viewportMatrix, RED);
 
 		////円の描画
 		//if (IsCollision(sphere1, sphere2)) {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
 		//} else {
-		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		//}
 		//DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
