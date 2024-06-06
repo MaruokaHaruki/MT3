@@ -1092,6 +1092,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		} else {
 			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		}
+
 		//2
 		//DrawAABB(aabb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
