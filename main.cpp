@@ -430,7 +430,6 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 ///
 ///レンダリングパイプライン
 ///
-
 #pragma region レンダリングパイプライン
 
 
@@ -866,6 +865,46 @@ bool IsAABB2SphereCollision(const AABB& aabb, const Sphere& sphere) {
 	return distanceSquared <= sphere.radius * sphere.radius;
 }
 
+///
+///aabbと線分の当たり判定
+///
+bool IsAABB2LineCillision(const AABB& aabb, const Segment& segment) {
+	// tminとtmaxは、線分上の交差区間を表します
+	float tmin = 0.0f;
+	float tmax = 1.0f;
+
+	// ラムダ関数で各軸の衝突をチェック
+	// start: 線分の始点の座標
+	// dir: 線分の方向ベクトル
+	// min: AABBの最小座標
+	// max: AABBの最大座標
+	auto checkAxis = [&](float start, float dir, float min, float max) {
+		if (dir != 0.0f) {
+			float invDir = 1.0f / dir;  // 方向ベクトルの逆数を計算
+			float t1 = ( min - start ) * invDir;  // 線分がAABBの最小座標に達するt値
+			float t2 = ( max - start ) * invDir;  // 線分がAABBの最大座標に達するt値
+
+			if (t1 > t2) std::swap(t1, t2);  // t1がt2より大きい場合は入れ替え
+
+			tmin = std::max(tmin, t1);  // tminを更新
+			tmax = std::min(tmax, t2);  // tmaxを更新
+
+			if (tmin > tmax) return false;  // tminがtmaxを超える場合は交差しない
+		} else {
+			if (start < min || start > max) return false;  // 線分がAABBの外側にある場合は交差しない
+		}
+		return true;
+		};
+
+	// 各軸について、線分とAABBの交差をチェック
+	if (!checkAxis(segment.origin.x, segment.diff.x, aabb.min.x, aabb.max.x)) return false;
+	if (!checkAxis(segment.origin.y, segment.diff.y, aabb.min.y, aabb.max.y)) return false;
+	if (!checkAxis(segment.origin.z, segment.diff.z, aabb.min.z, aabb.max.z)) return false;
+
+	// すべての軸で交差する場合はtrueを返す
+	return true;
+}
+
 
 ///
 ///カメラの位置
@@ -884,6 +923,8 @@ Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
 
 	return viewMatrix;
 }
+
+
 
 
 
@@ -937,7 +978,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//Plane plane{ {0.0f,1.0f,0.0f}, { 0.0f } };
 
 	//点
-	//Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
+	Segment segment{ {-0.7f,-0.3f,0.0f},{2.0f,-0.5f,0.0f} };
 	//Vector3 point{ -1.5f,0.6f,0.6f };
 
 	//正射影ベクトルの計算
@@ -957,7 +998,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//aabbの初期値
 	AABB aabb1{
 		{-0.5f,-0.5f,-0.5f},
-		{0.0f,0.0f,0.0f},
+		{0.5f,0.5f,0.5f},
 	};
 	//AABB aabb2{
 	//	{0.2f,0.2f,0.2f},
@@ -1050,8 +1091,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Separator();
 		ImGui::Spacing();
 		// 球体1
-		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
-		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
+		ImGui::DragFloat3("Segment.diff", &segment.diff.x, 0.01f);
+		ImGui::DragFloat3("Segment.origin", &segment.origin.x, 0.01f);
+		//ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
+		//ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
 		// 球体2
 		//ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
 		//ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
@@ -1087,7 +1130,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		///aabbの描画
 		//1
-		if (IsAABB2SphereCollision(aabb1,sphere1)) {
+		if (IsAABB2LineCillision(aabb1,segment)) {
 			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, RED);
 		} else {
 			DrawAABB(aabb1, worldViewProjectionMatrix, viewportMatrix, WHITE);
@@ -1104,7 +1147,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//if (IsCollision(sphere1, sphere2)) {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
 		//} else {
-		DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		//}
 		//DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
@@ -1128,14 +1171,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 		//線分の描画
-		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
 
 		////塩と平面の接触判定
 		//if (IsLine2Sphere(segment, plane)) {
 		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
 		//} else {
-		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+			Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 		//}
 
 		//塩と平面の接触判定
