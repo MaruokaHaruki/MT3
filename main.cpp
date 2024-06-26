@@ -989,6 +989,46 @@ bool IsOBB2SphereCollision(const OBB& obb, const Sphere& sphere) {
 	return distanceSquared <= ( sphere.radius * sphere.radius );
 }
 
+///
+/// obbと線の当たり判定
+///
+bool IsOBB2LineCollsion(const OBB& obb, const Segment& line) {
+	// 線の始点をOBBのローカル座標に変換する
+	Vector3 p = line.origin - obb.center;
+
+	// 線の方向ベクトルをOBBの軸に射影する
+	Vector3 d = line.diff;
+
+	// OBの各軸での線の始点と方向ベクトルの成分
+	float tMin = -INFINITY;
+	float tMax = INFINITY;
+
+	for (int i = 0; i < 3; ++i) {
+		Vector3 axis = obb.orientations[i];
+
+		// 線の始点と方向ベクトルを軸に射影する
+		float e = Dot(axis, p);
+		float f = Dot(axis, d);
+
+		// 線とOBBの各面の交点を求める
+		if (fabs(f) > 0.0001f) {
+			float t1 = ( e + obb.size[i] ) / f;
+			float t2 = ( e - obb.size[i] ) / f;
+
+			if (t1 > t2) std::swap(t1, t2);
+
+			tMin = std::max(tMin, t1);
+			tMax = std::min(tMax, t2);
+
+			if (tMin > tMax) return false;
+		} else if (-e - obb.size[i] > 0.0f || -e + obb.size[i] < 0.0f) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 
 ///
 ///カメラの位置
@@ -1058,8 +1098,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//Plane plane{ {0.0f,1.0f,0.0f}, { 0.0f } };
 
 	//点
-	//Segment segment{ {-0.7f,-0.3f,0.0f},{2.0f,-0.5f,0.0f} };
-	//Vector3 point{ -1.5f,0.6f,0.6f };
+	Segment segment{ {-0.7f,-0.3f,0.0f},{2.0f,-0.5f,0.0f} };
+	Vector3 point{ -1.5f,0.6f,0.6f };
 
 	//正射影ベクトルの計算
 	//Vector3 project = Project(SubtractVector3(point, segment.origin), segment.diff);
@@ -1195,8 +1235,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//plane.normal = Normalize(plane.normal);
 		//ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
 		/// 線
-		//ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
-		//ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
+		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
 		/// 三角形
 		//ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
 		//ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
@@ -1258,25 +1298,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//平面の描画
 		//DrawPlane(plane, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
-
-		////円の描画
+		/// ===円の描画=== ///
 		//if (IsCollision(sphere1, sphere2)) {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
 		//} else {
-		DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		//}
 		//DrawSphere(sphere2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		//Gridの描画
 
-		////塩と平面の接触判定
+		/// ===塩と平面の接触判定=== ///
 		//if (IsSphere2PlaneCollision(sphere1, plane)) {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, RED);
 		//} else {
 		//	DrawSphere(sphere1, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		//}
 
-		////三角形と線の判定
+		/// ===三角形と線の判定=== ///
 		////if (IsTriangle2Line(triangle, segment)) {
 		////	三角形の描画
 		////	DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, RED);
@@ -1285,31 +1324,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		////}
 		//DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
+		/// ===線分の描画=== ///
+		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 
-		//線分の描画
-		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
-
-		////塩と平面の接触判定
+		/// ===塩と平面の接触判定=== /// 
 		//if (IsLine2Sphere(segment, plane)) {
 		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
 		//} else {
 			//Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 		//}
 
-		//塩と平面の接触判定
+		/// ===塩と平面の接触判定=== ///
 		//if (IsTriangle2Line(triangle, segment)) {
 		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), RED);
 		//} else {
 		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 		//}
 
+		/// ===OBBと球体の当たり判定=== ///
 		if (IsOBB2SphereCollision(obb, sphere1)) {
 			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
 		} else {
 			///obbの描画
 			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		}
+
+		/// ===OBBと線の当たり判定=== ///
+		if (IsOBB2LineCollsion(obb, segment)) {
+			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
+		} else {
+			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		}
+
 
 
 		///
