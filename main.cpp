@@ -127,6 +127,11 @@ float Length(const Vector3& v) {
 	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
+// ベクトルの長さの二乗を計算する関数
+float LengthSquared(const Vector3& v) {
+	return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
 #pragma endregion
 
 ///
@@ -750,14 +755,14 @@ void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Mat
 void DrawOBB(const OBB& obb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	// 8頂点の算出
 	std::array<Vector3, 8> vertices = {
-		Vector3{obb.center.x - obb.orientations[0].x * obb.size.x - obb.orientations[1].y * obb.size.y - obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x + obb.orientations[0].x * obb.size.x - obb.orientations[1].y * obb.size.y - obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x - obb.orientations[0].x * obb.size.x + obb.orientations[1].y * obb.size.y - obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x + obb.orientations[0].x * obb.size.x + obb.orientations[1].y * obb.size.y - obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x - obb.orientations[0].x * obb.size.x - obb.orientations[1].y * obb.size.y + obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x + obb.orientations[0].x * obb.size.x - obb.orientations[1].y * obb.size.y + obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x - obb.orientations[0].x * obb.size.x + obb.orientations[1].y * obb.size.y + obb.orientations[2].z * obb.size.z},
-		Vector3{obb.center.x + obb.orientations[0].x * obb.size.x + obb.orientations[1].y * obb.size.y + obb.orientations[2].z * obb.size.z}
+		obb.center - obb.orientations[0] * obb.size.x - obb.orientations[1] * obb.size.y - obb.orientations[2] * obb.size.z,
+		obb.center + obb.orientations[0] * obb.size.x - obb.orientations[1] * obb.size.y - obb.orientations[2] * obb.size.z,
+		obb.center - obb.orientations[0] * obb.size.x + obb.orientations[1] * obb.size.y - obb.orientations[2] * obb.size.z,
+		obb.center + obb.orientations[0] * obb.size.x + obb.orientations[1] * obb.size.y - obb.orientations[2] * obb.size.z,
+		obb.center - obb.orientations[0] * obb.size.x - obb.orientations[1] * obb.size.y + obb.orientations[2] * obb.size.z,
+		obb.center + obb.orientations[0] * obb.size.x - obb.orientations[1] * obb.size.y + obb.orientations[2] * obb.size.z,
+		obb.center - obb.orientations[0] * obb.size.x + obb.orientations[1] * obb.size.y + obb.orientations[2] * obb.size.z,
+		obb.center + obb.orientations[0] * obb.size.x + obb.orientations[1] * obb.size.y + obb.orientations[2] * obb.size.z
 	};
 
 	// 頂点の変換
@@ -953,6 +958,37 @@ bool IsAABB2LineCillision(const AABB& aabb, const Segment& segment) {
 	return true;
 }
 
+///
+///obbと球体の当たり判定
+///
+bool IsOBB2SphereCollision(const OBB& obb, const Sphere& sphere) {
+	// 球の中心をOBBのローカル空間に変換
+	Vector3 localCenter = sphere.center - obb.center;
+
+	// OBBの各軸に投影して距離を計算
+	Vector3 closestPoint = obb.center;
+	for (int i = 0; i < 3; ++i) {
+		// 球の中心をOBBのi番目の軸に投影
+		float distance = Dot(localCenter, obb.orientations[i]);
+
+		// クランプして最近傍点を計算
+		if (distance > obb.size.x) {
+			distance = obb.size.x;
+		} else if (distance < -obb.size.x) {
+			distance = -obb.size.x;
+		}
+
+		closestPoint = closestPoint + ( obb.orientations[i] * distance );
+	}
+
+	// 最近傍点と球の中心の距離を計算
+	Vector3 difference = sphere.center - closestPoint;
+	float distanceSquared = LengthSquared(difference);
+
+	// 距離が球の半径以内かをチェック
+	return distanceSquared <= ( sphere.radius * sphere.radius );
+}
+
 
 ///
 ///カメラの位置
@@ -971,10 +1007,6 @@ Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
 
 	return viewMatrix;
 }
-
-
-
-
 
 
 
@@ -1019,7 +1051,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	bool IsDebugCameraActive = false;
 
 	//球体
-	Sphere sphere1{ {0.0f,5.0f,0.0f},1.0f };
+	Sphere sphere1{ {0.0f,0.0f,0.0f},1.0f };
 	//Sphere sphere2{ {1.0f,1.0f,0.0f},1.0f };
 
 	//平面
@@ -1053,7 +1085,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//	{1.0f,1.0f,1.0f},
 	//};
 
-	Vector3 rotate{ 0.0f,0.0f,0.0f };
+	Vector3 obbRotate{ 0.0f,0.0f,0.0f };
 
 	OBB obb{
 		.center{-1.0f,0.0f,0.0f},
@@ -1077,7 +1109,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		/// ===デバックカメラ起動=== ///
-		if (Novice::CheckHitKey(DIK_SPACE)) {
+		if (keys[DIK_SPACE] && !preKeys[DIK_SPACE]) {
 			if (IsDebugCameraActive) {
 				IsDebugCameraActive = false;
 			} else {
@@ -1148,47 +1180,52 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Text("Object Settings");
 		ImGui::Separator();
 		ImGui::Spacing();
-		// 球体1
+		/// 線
 		//ImGui::DragFloat3("Segment.diff", &segment.diff.x, 0.01f);
 		//ImGui::DragFloat3("Segment.origin", &segment.origin.x, 0.01f);
+		/// 球体1
 		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
 		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
-		// 球体2
+		/// 球体2
 		//ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
 		//ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
-		// 平面
+		/// 平面
 		//ImGui::DragFloat3("Plane Normal", &plane.normal.x, 0.01f);
 		// NOTE: 法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
 		//plane.normal = Normalize(plane.normal);
 		//ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
-		// 線
+		/// 線
 		//ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
 		//ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
-		// 三角形
+		/// 三角形
 		//ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
 		//ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
 		//ImGui::DragFloat3("Triangle Vertex 3", &triangle.vertics[2].x, 0.01f);
-		//AABB
+		///AABB
 		//ImGui::DragFloat3("AABB1", &aabb1.max.x, 0.01f);
 		//ImGui::DragFloat3("AABB1", &aabb1.min.x, 0.01f);
+		///OBB
+		ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
+		ImGui::DragFloat3("OBB.rotate", &obbRotate.x, 0.01f);
+		ImGui::DragFloat3("OBB.size", &obb.size.x, 0.01f);
 
 		ImGui::End();
 
 
 		/// ===回転行列を生成=== ///
-		Matrix4x4 rotateMatrix = MultiplyMatrix(MakeRotateXMatrix(rotate.x), MultiplyMatrix(MakeRotateYMatrix(rotate.y), MakeRotateZMatrix(rotate.z)));
+		Matrix4x4 rotateMatrix = MultiplyMatrix(MakeRotateXMatrix(obbRotate.x), MultiplyMatrix(MakeRotateYMatrix(obbRotate.y), MakeRotateZMatrix(obbRotate.z)));
 
 		obb.orientations[0].x = rotateMatrix.m[0][0];
 		obb.orientations[0].y = rotateMatrix.m[0][1];
 		obb.orientations[0].z = rotateMatrix.m[0][2];
 
-		obb.orientations[0].x = rotateMatrix.m[0][0];
-		obb.orientations[0].y = rotateMatrix.m[0][1];
-		obb.orientations[0].z = rotateMatrix.m[0][2];
+		obb.orientations[1].x = rotateMatrix.m[1][0];
+		obb.orientations[1].y = rotateMatrix.m[1][1];
+		obb.orientations[1].z = rotateMatrix.m[1][2];
 
-		obb.orientations[0].x = rotateMatrix.m[0][0];
-		obb.orientations[0].y = rotateMatrix.m[0][1];
-		obb.orientations[0].z = rotateMatrix.m[0][2];
+		obb.orientations[2].x = rotateMatrix.m[2][0];
+		obb.orientations[2].y = rotateMatrix.m[2][1];
+		obb.orientations[2].z = rotateMatrix.m[2][2];
 
 
 
@@ -1266,6 +1303,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//} else {
 		//	Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 		//}
+
+		if (IsOBB2SphereCollision(obb, sphere1)) {
+			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
+		} else {
+			///obbの描画
+			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		}
 
 
 		///
