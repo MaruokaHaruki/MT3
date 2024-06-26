@@ -1031,6 +1031,54 @@ bool IsOBB2LineCollsion(const OBB& obb, const Segment& line) {
 
 
 ///
+/// 与えられた軸に沿ってOBB同士の衝突をテスト
+/// 
+//NOTE:指定された軸に沿ったOBBの投影半径を計算後、OBB同士の投影距離と比較して重なりがあるかどうかを判断
+bool TestAxis(const Vector3& axis, const OBB& obb1, const OBB& obb2) {
+	float r1 = 0.0f, r2 = 0.0f;
+
+	for (int i = 0; i < 3; ++i) {
+		r1 += obb1.size[i] * std::abs(Dot(axis, obb1.orientations[i]));
+		r2 += obb2.size[i] * std::abs(Dot(axis, obb2.orientations[i]));
+	}
+
+	float d = std::abs(Dot(axis, obb2.center - obb1.center));
+	return d <= r1 + r2;
+}
+
+///
+/// Obb同士の当たり判定
+///
+bool IsOBB2OBBCollision(const OBB& obb1, const OBB& obb2) {
+	// OBB1 の軸
+	for (int i = 0; i < 3; ++i) {
+		if (!TestAxis(obb1.orientations[i], obb1, obb2)) {
+			return false;
+		}
+	}
+
+	// OBB2 の軸
+	for (int i = 0; i < 3; ++i) {
+		if (!TestAxis(obb2.orientations[i], obb1, obb2)) {
+			return false;
+		}
+	}
+
+	// OBB1 と OBB2 の軸のクロスプロダクト
+	for (int i = 0; i < 3; ++i) {
+		for (int j = 0; j < 3; ++j) {
+			Vector3 axis = Cross(obb1.orientations[i], obb2.orientations[j]);
+			if (!TestAxis(axis, obb1, obb2)) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+
+///
 ///カメラの位置
 ///
 Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
@@ -1134,6 +1182,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 						 {0.0f,0.0f,1.0f}},
 		.size{0.5f,0.5f,0.5f}
 	};
+
+	Vector3 obbRotate2{ 0.0f,0.0f,0.0f };
+
+	OBB obb2{
+		.center{-2.0f,0.0f,0.0f},
+		.orientations = {{1.0f,0.0f,0.0f},
+						 {0.0f,0.0f,0.0f},
+						 {0.0f,0.0f,1.0f}},
+		.size{0.5f,0.5f,0.5f}
+	};
+
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1248,6 +1307,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
 		ImGui::DragFloat3("OBB.rotate", &obbRotate.x, 0.01f);
 		ImGui::DragFloat3("OBB.size", &obb.size.x, 0.01f);
+		///
+		ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
+		ImGui::DragFloat3("OBB2.rotate", &obbRotate2.x, 0.01f);
+		ImGui::DragFloat3("OBB2.size", &obb2.size.x, 0.01f);
 
 		ImGui::End();
 
@@ -1267,7 +1330,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		obb.orientations[2].y = rotateMatrix.m[2][1];
 		obb.orientations[2].z = rotateMatrix.m[2][2];
 
+		/// ===回転行列を生成=== ///
+		Matrix4x4 rotateMatrix2 = MultiplyMatrix(MakeRotateXMatrix(obbRotate2.x), MultiplyMatrix(MakeRotateYMatrix(obbRotate2.y), MakeRotateZMatrix(obbRotate2.z)));
 
+		obb2.orientations[0].x = rotateMatrix2.m[0][0];
+		obb2.orientations[0].y = rotateMatrix2.m[0][1];
+		obb2.orientations[0].z = rotateMatrix2.m[0][2];
+
+		obb2.orientations[1].x = rotateMatrix2.m[1][0];
+		obb2.orientations[1].y = rotateMatrix2.m[1][1];
+		obb2.orientations[1].z = rotateMatrix2.m[1][2];
+
+		obb2.orientations[2].x = rotateMatrix2.m[2][0];
+		obb2.orientations[2].y = rotateMatrix2.m[2][1];
+		obb2.orientations[2].z = rotateMatrix2.m[2][2];
 
 
 
@@ -1325,9 +1401,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//DrawTriangle(triangle, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		/// ===線分の描画=== ///
-		Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
-		Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
-		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		//Vector3 start = Transform(Transform(segment.origin, worldViewProjectionMatrix), viewportMatrix);
+		//Vector3 end = Transform(Transform(AddVector3(segment.origin, segment.diff), worldViewProjectionMatrix), viewportMatrix);
+		//Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 
 		/// ===塩と平面の接触判定=== /// 
 		//if (IsLine2Sphere(segment, plane)) {
@@ -1344,20 +1420,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//}
 
 		/// ===OBBと球体の当たり判定=== ///
-		if (IsOBB2SphereCollision(obb, sphere1)) {
-			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
-		} else {
-			///obbの描画
-			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
-		}
+		//if (IsOBB2SphereCollision(obb, sphere1)) {
+		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
+		//} else {
+		//	///obbの描画
+		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//}
 
 		/// ===OBBと線の当たり判定=== ///
-		if (IsOBB2LineCollsion(obb, segment)) {
+		//if (IsOBB2LineCollsion(obb, segment)) {
+		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
+		//} else {
+		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//}
+
+		/// ===OBB同士の当たり判定=== ///
+		DrawOBB(obb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+		if (IsOBB2OBBCollision(obb,obb2)) {
 			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
 		} else {
 			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		}
-
 
 
 		///
