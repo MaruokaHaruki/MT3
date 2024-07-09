@@ -650,6 +650,22 @@ Vector3 ClossPoint(const Vector3& point, const Segment& segment) {
 }
 
 ///
+/// ラープ関数
+///
+Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t) {
+	Vector3 result;
+	result.x = v1.x + t * ( v2.x - v1.x );
+	result.y = v1.y + t * ( v2.y - v1.y );
+	result.z = v1.z + t * ( v2.z - v1.z );
+	return result;
+}
+
+
+///=====================================================/// 
+///描画系
+///=====================================================///
+
+///
 ///平面の描画
 ///
 Vector3 Perpendicular(const Vector3& vector) {
@@ -707,6 +723,7 @@ void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatri
 	Novice::DrawLine(static_cast<int>( transformedVertices[0].x ), static_cast<int>( transformedVertices[0].y ), static_cast<int>( transformedVertices[2].x ), static_cast<int>( transformedVertices[2].y ), color);
 	Novice::DrawLine(static_cast<int>( transformedVertices[1].x ), static_cast<int>( transformedVertices[1].y ), static_cast<int>( transformedVertices[2].x ), static_cast<int>( transformedVertices[2].y ), color);
 }
+
 
 ///
 /// AABBの描画
@@ -791,6 +808,69 @@ void DrawOBB(const OBB& obb, const Matrix4x4& viewProjectionMatrix, const Matrix
 
 
 ///
+/// TransformToScreenSpace関数
+///
+Vector3 TransformToScreenSpace(const Vector3& point, const Matrix4x4& matrix) {
+	Vector3 result;
+	result.x = point.x * matrix.m[0][0] + point.y * matrix.m[1][0] + point.z * matrix.m[2][0] + matrix.m[3][0];
+	result.y = point.x * matrix.m[0][1] + point.y * matrix.m[1][1] + point.z * matrix.m[2][1] + matrix.m[3][1];
+	result.z = point.x * matrix.m[0][2] + point.y * matrix.m[1][2] + point.z * matrix.m[2][2] + matrix.m[3][2];
+	float w = point.x * matrix.m[0][3] + point.y * matrix.m[1][3] + point.z * matrix.m[2][3] + matrix.m[3][3];
+
+	// 透視投影の場合、wで除算
+	result.x /= w;
+	result.y /= w;
+	result.z /= w;
+
+	return result;
+}
+
+///
+/// ベジエ曲線の描画
+///
+void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2,
+	const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+
+	const int numSegments = 50; // ベジエ曲線の分割数
+	Vector3 previousPoint = TransformToScreenSpace(controlPoint0, viewProjectionMatrix);
+	previousPoint = TransformToScreenSpace(previousPoint, viewportMatrix);
+
+	for (int i = 1; i <= numSegments; ++i) {
+		float t = i / float(numSegments);
+		Vector3 pointOnCurve = Lerp(Lerp(controlPoint0, controlPoint1, t), Lerp(controlPoint1, controlPoint2, t), t);
+
+		// ワールド空間の座標をクリップ空間の座標に変換
+		Vector3 clipSpacePoint = TransformToScreenSpace(pointOnCurve, viewProjectionMatrix);
+
+		// クリップ空間の座標をビューポート空間の座標に変換
+		Vector3 screenPoint = TransformToScreenSpace(clipSpacePoint, viewportMatrix);
+
+		// 線を描画
+		Novice::DrawLine(int(previousPoint.x), int(previousPoint.y), int(screenPoint.x), int(screenPoint.y), color);
+
+		previousPoint = screenPoint;
+	}
+
+	//Sphere CPSphere0;
+	//CPSphere0.center.x = controlPoint0.x;
+	//CPSphere0.center.y = controlPoint0.y;
+	//CPSphere0.center.z = controlPoint0.z;
+
+	//Sphere CPSphere1 = { controlPoint1 ,0.1f };
+	//Sphere CPSphere2 = { controlPoint2 ,0.1f };
+
+	//// 各コントロールポイントを球として描画
+	//DrawSphere(CPSphere0, viewProjectionMatrix, viewportMatrix, color);
+	//DrawSphere(CPSphere1, viewProjectionMatrix, viewportMatrix, color);
+	//DrawSphere(CPSphere2, viewProjectionMatrix, viewportMatrix, color);
+}
+
+
+///=====================================================/// 
+///判定系
+///=====================================================///
+
+///
 ///球体の衝突判定
 ///
 bool IsCollision(const Sphere& s1, const Sphere& s2) {
@@ -804,6 +884,7 @@ bool IsCollision(const Sphere& s1, const Sphere& s2) {
 	return centerDistance <= radiusSum;
 }
 
+
 ///
 ///球体と平面の衝突判定
 /// 
@@ -814,10 +895,10 @@ bool IsSphere2PlaneCollision(const Sphere& sphere, const Plane& plane) {
 	return fabs(distance) <= sphere.radius;
 }
 
+
 ///
 ///線と平面の衝突判定
 ///
-
 bool IsLine2Sphere(const Segment& segment, const Plane& plane) {
 	//垂直判定を行うために、法線と線の内積を求める
 	float dot = Dot(plane.normal, segment.diff);
@@ -839,6 +920,7 @@ bool IsLine2Sphere(const Segment& segment, const Plane& plane) {
 		return false;
 	}
 }
+
 
 ///
 ///三角形と線の衝突判定
@@ -877,6 +959,7 @@ bool IsTriangle2Line(const Triangle& triangle, const Segment& segment) {
 	return true;
 }
 
+
 ///
 ///aabbとaabbの判定
 ///
@@ -900,6 +983,7 @@ bool IsAABB2AABBCollision(const AABB& aabb1, const AABB& aabb2) {
 	return true;
 }
 
+
 ///
 ///aabbと球体の当たり判定
 ///
@@ -917,6 +1001,7 @@ bool IsAABB2SphereCollision(const AABB& aabb, const Sphere& sphere) {
 	// 距離の二乗が球体の半径の二乗以下であれば衝突している
 	return distanceSquared <= sphere.radius * sphere.radius;
 }
+
 
 ///
 ///aabbと線分の当たり判定
@@ -958,6 +1043,7 @@ bool IsAABB2LineCillision(const AABB& aabb, const Segment& segment) {
 	return true;
 }
 
+
 ///
 ///obbと球体の当たり判定
 ///
@@ -988,6 +1074,7 @@ bool IsOBB2SphereCollision(const OBB& obb, const Sphere& sphere) {
 	// 距離が球の半径以内かをチェック
 	return distanceSquared <= ( sphere.radius * sphere.radius );
 }
+
 
 ///
 /// obbと線の当たり判定
@@ -1028,7 +1115,6 @@ bool IsOBB2LineCollsion(const OBB& obb, const Segment& line) {
 
 	return true;
 }
-
 
 ///
 /// 与えられた軸に沿ってOBB同士の衝突をテスト
@@ -1077,6 +1163,13 @@ bool IsOBB2OBBCollision(const OBB& obb1, const OBB& obb2) {
 	return true;
 }
 
+
+
+
+
+///=====================================================/// 
+///その他
+///=====================================================///
 
 ///
 ///カメラの位置
@@ -1173,26 +1266,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//	{1.0f,1.0f,1.0f},
 	//};
 
-	Vector3 obbRotate{ 0.0f,0.0f,0.0f };
+	//Vector3 obbRotate{ 0.0f,0.0f,0.0f };
 
-	OBB obb{
-		.center{-1.0f,0.0f,0.0f},
-		.orientations = {{1.0f,0.0f,0.0f},
-						 {0.0f,0.0f,0.0f},
-						 {0.0f,0.0f,1.0f}},
-		.size{0.5f,0.5f,0.5f}
+	//OBB obb{
+	//	.center{-1.0f,0.0f,0.0f},
+	//	.orientations = {{1.0f,0.0f,0.0f},
+	//					 {0.0f,0.0f,0.0f},
+	//					 {0.0f,0.0f,1.0f}},
+	//	.size{0.5f,0.5f,0.5f}
+	//};
+
+	//Vector3 obbRotate2{ 0.0f,0.0f,0.0f };
+
+	//OBB obb2{
+	//	.center{-2.0f,0.0f,0.0f},
+	//	.orientations = {{1.0f,0.0f,0.0f},
+	//					 {0.0f,0.0f,0.0f},
+	//					 {0.0f,0.0f,1.0f}},
+	//	.size{0.5f,0.5f,0.5f}
+	//};
+
+	Vector3 controlPoints[3] = {
+	{-0.8f,0.58f,1.0f},
+	{1.76f,1.0f,-0.3f},
+	{0.94f,-0.7f,2.3f},
 	};
-
-	Vector3 obbRotate2{ 0.0f,0.0f,0.0f };
-
-	OBB obb2{
-		.center{-2.0f,0.0f,0.0f},
-		.orientations = {{1.0f,0.0f,0.0f},
-						 {0.0f,0.0f,0.0f},
-						 {0.0f,0.0f,1.0f}},
-		.size{0.5f,0.5f,0.5f}
-	};
-
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1304,46 +1402,51 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//ImGui::DragFloat3("AABB1", &aabb1.max.x, 0.01f);
 		//ImGui::DragFloat3("AABB1", &aabb1.min.x, 0.01f);
 		///OBB
-		ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
-		ImGui::DragFloat3("OBB.rotate", &obbRotate.x, 0.01f);
-		ImGui::DragFloat3("OBB.size", &obb.size.x, 0.01f);
-		///
-		ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
-		ImGui::DragFloat3("OBB2.rotate", &obbRotate2.x, 0.01f);
-		ImGui::DragFloat3("OBB2.size", &obb2.size.x, 0.01f);
+		//ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
+		//ImGui::DragFloat3("OBB.rotate", &obbRotate.x, 0.01f);
+		//ImGui::DragFloat3("OBB.size", &obb.size.x, 0.01f);
+		///OBB2
+		//ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
+		//ImGui::DragFloat3("OBB2.rotate", &obbRotate2.x, 0.01f);
+		//ImGui::DragFloat3("OBB2.size", &obb2.size.x, 0.01f);
+		///ベジエ曲線
+		ImGui::Separator();
+		ImGui::DragFloat3("controlPoints0", &controlPoints[0].x, 0.01f);
+		ImGui::DragFloat3("controlPoints1", &controlPoints[1].x, 0.01f);
+		ImGui::DragFloat3("controlPoints2", &controlPoints[2].x, 0.01f);
 
 		ImGui::End();
 
 
 		/// ===回転行列を生成=== ///
-		Matrix4x4 rotateMatrix = MultiplyMatrix(MakeRotateXMatrix(obbRotate.x), MultiplyMatrix(MakeRotateYMatrix(obbRotate.y), MakeRotateZMatrix(obbRotate.z)));
+		//Matrix4x4 rotateMatrix = MultiplyMatrix(MakeRotateXMatrix(obbRotate.x), MultiplyMatrix(MakeRotateYMatrix(obbRotate.y), MakeRotateZMatrix(obbRotate.z)));
 
-		obb.orientations[0].x = rotateMatrix.m[0][0];
-		obb.orientations[0].y = rotateMatrix.m[0][1];
-		obb.orientations[0].z = rotateMatrix.m[0][2];
+		//obb.orientations[0].x = rotateMatrix.m[0][0];
+		//obb.orientations[0].y = rotateMatrix.m[0][1];
+		//obb.orientations[0].z = rotateMatrix.m[0][2];
 
-		obb.orientations[1].x = rotateMatrix.m[1][0];
-		obb.orientations[1].y = rotateMatrix.m[1][1];
-		obb.orientations[1].z = rotateMatrix.m[1][2];
+		//obb.orientations[1].x = rotateMatrix.m[1][0];
+		//obb.orientations[1].y = rotateMatrix.m[1][1];
+		//obb.orientations[1].z = rotateMatrix.m[1][2];
 
-		obb.orientations[2].x = rotateMatrix.m[2][0];
-		obb.orientations[2].y = rotateMatrix.m[2][1];
-		obb.orientations[2].z = rotateMatrix.m[2][2];
+		//obb.orientations[2].x = rotateMatrix.m[2][0];
+		//obb.orientations[2].y = rotateMatrix.m[2][1];
+		//obb.orientations[2].z = rotateMatrix.m[2][2];
 
 		/// ===回転行列を生成=== ///
-		Matrix4x4 rotateMatrix2 = MultiplyMatrix(MakeRotateXMatrix(obbRotate2.x), MultiplyMatrix(MakeRotateYMatrix(obbRotate2.y), MakeRotateZMatrix(obbRotate2.z)));
+		//Matrix4x4 rotateMatrix2 = MultiplyMatrix(MakeRotateXMatrix(obbRotate2.x), MultiplyMatrix(MakeRotateYMatrix(obbRotate2.y), MakeRotateZMatrix(obbRotate2.z)));
 
-		obb2.orientations[0].x = rotateMatrix2.m[0][0];
-		obb2.orientations[0].y = rotateMatrix2.m[0][1];
-		obb2.orientations[0].z = rotateMatrix2.m[0][2];
+		//obb2.orientations[0].x = rotateMatrix2.m[0][0];
+		//obb2.orientations[0].y = rotateMatrix2.m[0][1];
+		//obb2.orientations[0].z = rotateMatrix2.m[0][2];
 
-		obb2.orientations[1].x = rotateMatrix2.m[1][0];
-		obb2.orientations[1].y = rotateMatrix2.m[1][1];
-		obb2.orientations[1].z = rotateMatrix2.m[1][2];
+		//obb2.orientations[1].x = rotateMatrix2.m[1][0];
+		//obb2.orientations[1].y = rotateMatrix2.m[1][1];
+		//obb2.orientations[1].z = rotateMatrix2.m[1][2];
 
-		obb2.orientations[2].x = rotateMatrix2.m[2][0];
-		obb2.orientations[2].y = rotateMatrix2.m[2][1];
-		obb2.orientations[2].z = rotateMatrix2.m[2][2];
+		//obb2.orientations[2].x = rotateMatrix2.m[2][0];
+		//obb2.orientations[2].y = rotateMatrix2.m[2][1];
+		//obb2.orientations[2].z = rotateMatrix2.m[2][2];
 
 
 
@@ -1435,13 +1538,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//}
 
 		/// ===OBB同士の当たり判定=== ///
-		DrawOBB(obb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawOBB(obb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
-		if (IsOBB2OBBCollision(obb,obb2)) {
-			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
-		} else {
-			DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
-		}
+		//if (IsOBB2OBBCollision(obb,obb2)) {
+		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
+		//} else {
+		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//}
+
+
+		/// ===ベジエ曲線の描画=== ///
+		DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], worldViewProjectionMatrix, viewportMatrix, WHITE);
+
 
 
 		///
