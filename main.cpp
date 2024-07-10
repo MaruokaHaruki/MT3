@@ -875,6 +875,75 @@ void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, cons
 	DrawSphere(CPSphere2, viewProjectionMatrix, viewportMatrix, RED);
 }
 
+///
+/// Catmull-Romスプラインの描画
+///
+void DrawCatmullRom(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2, const Vector3& controlPoint3,
+	const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+
+	const int numSegments = 32; // スプラインの分割数
+
+	// ワールド空間の座標をクリップ空間の座標に変換
+	Vector3 previousPointClipSpace = TransformToScreenSpace(controlPoint0, viewProjectionMatrix);
+	// クリップ空間の座標をビューポート空間の座標に変換
+	Vector3 previousPoint = TransformToScreenSpace(previousPointClipSpace, viewportMatrix);
+
+	for (int i = 1; i <= numSegments; ++i) {
+		float t = i / float(numSegments);
+
+		// Catmull-Romスプラインの補間
+		Vector3 p0p1 = Lerp(controlPoint0, controlPoint1, t);
+		Vector3 p1p2 = Lerp(controlPoint1, controlPoint2, t);
+		Vector3 p2p3 = Lerp(controlPoint2, controlPoint3, t);
+
+		Vector3 p0p1p1p2 = Lerp(p0p1, p1p2, t);
+		Vector3 p1p2p2p3 = Lerp(p1p2, p2p3, t);
+
+		Vector3 pointOnCurve = Lerp(p0p1p1p2, p1p2p2p3, t);
+
+		// ワールド空間の座標をクリップ空間の座標に変換
+		Vector3 clipSpacePoint = TransformToScreenSpace(pointOnCurve, viewProjectionMatrix);
+
+		// クリップ空間の座標をビューポート空間の座標に変換
+		Vector3 screenPoint = TransformToScreenSpace(clipSpacePoint, viewportMatrix);
+
+		// 線を描画
+		Novice::DrawLine(int(previousPoint.x), int(previousPoint.y), int(screenPoint.x), int(screenPoint.y), color);
+
+		previousPoint = screenPoint;
+	}
+
+	Sphere CPSphere0;
+	CPSphere0.center.x = controlPoint0.x;
+	CPSphere0.center.y = controlPoint0.y;
+	CPSphere0.center.z = controlPoint0.z;
+	CPSphere0.radius = 0.01f;
+
+	Sphere CPSphere1;
+	CPSphere1.center.x = controlPoint1.x;
+	CPSphere1.center.y = controlPoint1.y;
+	CPSphere1.center.z = controlPoint1.z;
+	CPSphere1.radius = 0.01f;
+
+	Sphere CPSphere2;
+	CPSphere2.center.x = controlPoint2.x;
+	CPSphere2.center.y = controlPoint2.y;
+	CPSphere2.center.z = controlPoint2.z;
+	CPSphere2.radius = 0.01f;
+
+	Sphere CPSphere3;
+	CPSphere3.center.x = controlPoint3.x;
+	CPSphere3.center.y = controlPoint3.y;
+	CPSphere3.center.z = controlPoint3.z;
+	CPSphere3.radius = 0.01f;
+
+	// 各コントロールポイントを球として描画
+	DrawSphere(CPSphere0, viewProjectionMatrix, viewportMatrix, RED);
+	DrawSphere(CPSphere1, viewProjectionMatrix, viewportMatrix, RED);
+	DrawSphere(CPSphere2, viewProjectionMatrix, viewportMatrix, RED);
+	DrawSphere(CPSphere3, viewProjectionMatrix, viewportMatrix, RED);
+}
+
 
 ///=====================================================/// 
 ///判定系
@@ -1176,7 +1245,6 @@ bool IsOBB2OBBCollision(const OBB& obb1, const OBB& obb2) {
 
 
 
-
 ///=====================================================/// 
 ///その他
 ///=====================================================///
@@ -1296,10 +1364,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//	.size{0.5f,0.5f,0.5f}
 	//};
 
-	Vector3 controlPoints[3] = {
+	Vector3 controlPoints[4] = {
 	{-0.8f,0.58f,1.0f},
 	{1.76f,1.0f,-0.3f},
 	{0.94f,-0.7f,2.3f},
+	{-0.53f,-0.26f,-0.15f},
 	};
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -1424,6 +1493,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("controlPoints0", &controlPoints[0].x, 0.01f);
 		ImGui::DragFloat3("controlPoints1", &controlPoints[1].x, 0.01f);
 		ImGui::DragFloat3("controlPoints2", &controlPoints[2].x, 0.01f);
+		ImGui::DragFloat3("controlPoints3", &controlPoints[3].x, 0.01f);
 
 		ImGui::End();
 
@@ -1556,10 +1626,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, WHITE);
 		//}
 
-
 		/// ===ベジエ曲線の描画=== ///
-		DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], worldViewProjectionMatrix, viewportMatrix, WHITE);
 
+		/// ===Cutmull-rom曲線の描画=== ///
+		DrawCatmullRom(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 
 		///
