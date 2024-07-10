@@ -574,7 +574,7 @@ void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMa
 ///
 
 void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
-	const uint32_t kSubDivision = 16;
+	const uint32_t kSubDivision = 8;
 	const float kLatEvery = float(M_PI) / float(kSubDivision);
 	const float kLonEvery = 2.0f * float(M_PI) / float(kSubDivision);
 
@@ -831,7 +831,7 @@ Vector3 TransformToScreenSpace(const Vector3& point, const Matrix4x4& matrix) {
 void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2,
 	const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 
-	const int numSegments = 50; // ベジエ曲線の分割数
+	const int numSegments = 32; // ベジエ曲線の分割数
 	Vector3 previousPoint = TransformToScreenSpace(controlPoint0, viewProjectionMatrix);
 	previousPoint = TransformToScreenSpace(previousPoint, viewportMatrix);
 
@@ -851,18 +851,28 @@ void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, cons
 		previousPoint = screenPoint;
 	}
 
-	//Sphere CPSphere0;
-	//CPSphere0.center.x = controlPoint0.x;
-	//CPSphere0.center.y = controlPoint0.y;
-	//CPSphere0.center.z = controlPoint0.z;
+	Sphere CPSphere0;
+	CPSphere0.center.x = controlPoint0.x;
+	CPSphere0.center.y = controlPoint0.y;
+	CPSphere0.center.z = controlPoint0.z;
+	CPSphere0.radius = 0.01f;
 
-	//Sphere CPSphere1 = { controlPoint1 ,0.1f };
-	//Sphere CPSphere2 = { controlPoint2 ,0.1f };
+	Sphere CPSphere1;
+	CPSphere1.center.x = controlPoint1.x;
+	CPSphere1.center.y = controlPoint1.y;
+	CPSphere1.center.z = controlPoint1.z;
+	CPSphere1.radius = 0.01f;
+
+	Sphere CPSphere2;
+	CPSphere2.center.x = controlPoint2.x;
+	CPSphere2.center.y = controlPoint2.y;
+	CPSphere2.center.z = controlPoint2.z;
+	CPSphere2.radius = 0.01f;
 
 	//// 各コントロールポイントを球として描画
-	//DrawSphere(CPSphere0, viewProjectionMatrix, viewportMatrix, color);
-	//DrawSphere(CPSphere1, viewProjectionMatrix, viewportMatrix, color);
-	//DrawSphere(CPSphere2, viewProjectionMatrix, viewportMatrix, color);
+	DrawSphere(CPSphere0, viewProjectionMatrix, viewportMatrix, RED);
+	DrawSphere(CPSphere1, viewProjectionMatrix, viewportMatrix, RED);
+	DrawSphere(CPSphere2, viewProjectionMatrix, viewportMatrix, RED);
 }
 
 
