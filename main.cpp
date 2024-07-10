@@ -1364,11 +1364,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//	.size{0.5f,0.5f,0.5f}
 	//};
 
-	Vector3 controlPoints[4] = {
-	{-0.8f,0.58f,1.0f},
-	{1.76f,1.0f,-0.3f},
-	{0.94f,-0.7f,2.3f},
-	{-0.53f,-0.26f,-0.15f},
+	//ベジエ曲線等
+	//Vector3 controlPoints[4] = {
+	//{-0.8f,0.58f,1.0f},
+	//{1.76f,1.0f,-0.3f},
+	//{0.94f,-0.7f,2.3f},
+	//{-0.53f,-0.26f,-0.15f},
+	//};
+
+	//階層構造にて使用
+	Vector3 translates[3] = {
+		{0.2f,1.0f,0.0f},
+		{0.4f,0.0f,0.0f},
+		{0.3f,0.0f,0.0f},
+	};
+
+	Vector3 rotates[3] = {
+		{0.0f,0.0f,-6.8f},
+		{0.0f,0.0f,-1.4f},
+		{0.0f,0.0f,0.0f},
+	};
+
+	Vector3 scales[3] = {
+		{1.0f,1.0f,1.0f},
+		{1.0f,1.0f,1.0f},
+		{1.0f,1.0f,1.0f}
 	};
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -1383,6 +1403,78 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓更新処理ここから
 		///
+
+		/// ===ImGui=== ///
+		ImGui::Begin("Window");
+		// カメラ関連
+		ImGui::Text("Camera Settings");
+		ImGui::Text("Press SPACE is DebugCameraActive");
+		ImGui::Separator();
+		ImGui::Spacing();
+		ImGui::DragFloat3("Camera Translate", &cameraTranslate.x, 0.01f);
+		ImGui::DragFloat3("Camera Rotate", &cameraRotate.x, 0.01f);
+		ImGui::DragFloat3("Camera Target", &cameraTarget.center.x, 0.01f); // ターゲットポイントの調整
+		// オブジェクト関連
+		ImGui::Spacing();
+		ImGui::Text("Object Settings");
+		ImGui::Separator();
+		ImGui::Spacing();
+		/// 線
+		//ImGui::DragFloat3("Segment.diff", &segment.diff.x, 0.01f);
+		//ImGui::DragFloat3("Segment.origin", &segment.origin.x, 0.01f);
+		/// 球体1
+		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
+		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
+		/// 球体2
+		//ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
+		//ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
+		/// 平面
+		//ImGui::DragFloat3("Plane Normal", &plane.normal.x, 0.01f);
+		// NOTE: 法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
+		//plane.normal = Normalize(plane.normal);
+		//ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
+		/// 線
+		ImGui::Separator();
+		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
+		/// 三角形
+		//ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
+		//ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
+		//ImGui::DragFloat3("Triangle Vertex 3", &triangle.vertics[2].x, 0.01f);
+		///AABB
+		//ImGui::DragFloat3("AABB1", &aabb1.max.x, 0.01f);
+		//ImGui::DragFloat3("AABB1", &aabb1.min.x, 0.01f);
+		///OBB
+		//ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
+		//ImGui::DragFloat3("OBB.rotate", &obbRotate.x, 0.01f);
+		//ImGui::DragFloat3("OBB.size", &obb.size.x, 0.01f);
+		///OBB2
+		//ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
+		//ImGui::DragFloat3("OBB2.rotate", &obbRotate2.x, 0.01f);
+		//ImGui::DragFloat3("OBB2.size", &obb2.size.x, 0.01f);
+		///ベジエ曲線
+		//ImGui::Separator();
+		//ImGui::DragFloat3("controlPoints0", &controlPoints[0].x, 0.01f);
+		//ImGui::DragFloat3("controlPoints1", &controlPoints[1].x, 0.01f);
+		//ImGui::DragFloat3("controlPoints2", &controlPoints[2].x, 0.01f);
+		//ImGui::DragFloat3("controlPoints3", &controlPoints[3].x, 0.01f);
+		///階層構造
+		ImGui::Separator();
+		ImGui::DragFloat3("translates0.scale", &scales[0].x, 0.01f);
+		ImGui::DragFloat3("translates0.rotate", &rotates[0].x, 0.01f);
+		ImGui::DragFloat3("translates0.translate", &translates[0].x, 0.01f);
+		ImGui::Separator();
+		ImGui::DragFloat3("translates1.scale", &scales[1].x, 0.01f);
+		ImGui::DragFloat3("translates1.rotate", &rotates[1].x, 0.01f);
+		ImGui::DragFloat3("translates1.translate", &translates[1].x, 0.01f);
+		ImGui::Separator();
+		ImGui::DragFloat3("translates2.scale", &scales[2].x, 0.01f);
+		ImGui::DragFloat3("translates2.rotate", &rotates[2].x, 0.01f);
+		ImGui::DragFloat3("translates2.translate", &translates[2].x, 0.01f);
+
+		ImGui::End();
+
+
 
 		/// ===デバックカメラ起動=== ///
 		if (keys[DIK_SPACE] && !preKeys[DIK_SPACE]) {
@@ -1438,64 +1530,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
 		////ビューポイント
 		//Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
-		//
-
-		ImGui::Begin("Window");
-
-		// カメラ関連
-		ImGui::Text("Camera Settings");
-		ImGui::Text("Press SPACE is DebugCameraActive");
-		ImGui::Separator();
-		ImGui::Spacing();
-		ImGui::DragFloat3("Camera Translate", &cameraTranslate.x, 0.01f);
-		ImGui::DragFloat3("Camera Rotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("Camera Target", &cameraTarget.center.x, 0.01f); // ターゲットポイントの調整
-
-		// オブジェクト関連
-		ImGui::Spacing();
-		ImGui::Text("Object Settings");
-		ImGui::Separator();
-		ImGui::Spacing();
-		/// 線
-		//ImGui::DragFloat3("Segment.diff", &segment.diff.x, 0.01f);
-		//ImGui::DragFloat3("Segment.origin", &segment.origin.x, 0.01f);
-		/// 球体1
-		ImGui::DragFloat3("Sphere 1 Center", &sphere1.center.x, 0.01f);
-		ImGui::DragFloat("Sphere 1 Radius", &sphere1.radius, 0.01f);
-		/// 球体2
-		//ImGui::DragFloat3("Sphere 2 Center", &sphere2.center.x, 0.01f);
-		//ImGui::DragFloat("Sphere 2 Radius", &sphere2.radius, 0.01f);
-		/// 平面
-		//ImGui::DragFloat3("Plane Normal", &plane.normal.x, 0.01f);
-		// NOTE: 法線を編集したらNormalizeをかけること。平面法線が単位ベクトル前提でアルゴリズムが組まれているため
-		//plane.normal = Normalize(plane.normal);
-		//ImGui::DragFloat("Plane Distance", &plane.distance, 0.01f);
-		/// 線
-		ImGui::DragFloat3("Segment Origin", &segment.origin.x, 0.01f);
-		ImGui::DragFloat3("Segment Diff", &segment.diff.x, 0.01f);
-		/// 三角形
-		//ImGui::DragFloat3("Triangle Vertex 1", &triangle.vertics[0].x, 0.01f);
-		//ImGui::DragFloat3("Triangle Vertex 2", &triangle.vertics[1].x, 0.01f);
-		//ImGui::DragFloat3("Triangle Vertex 3", &triangle.vertics[2].x, 0.01f);
-		///AABB
-		//ImGui::DragFloat3("AABB1", &aabb1.max.x, 0.01f);
-		//ImGui::DragFloat3("AABB1", &aabb1.min.x, 0.01f);
-		///OBB
-		//ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
-		//ImGui::DragFloat3("OBB.rotate", &obbRotate.x, 0.01f);
-		//ImGui::DragFloat3("OBB.size", &obb.size.x, 0.01f);
-		///OBB2
-		//ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
-		//ImGui::DragFloat3("OBB2.rotate", &obbRotate2.x, 0.01f);
-		//ImGui::DragFloat3("OBB2.size", &obb2.size.x, 0.01f);
-		///ベジエ曲線
-		ImGui::Separator();
-		ImGui::DragFloat3("controlPoints0", &controlPoints[0].x, 0.01f);
-		ImGui::DragFloat3("controlPoints1", &controlPoints[1].x, 0.01f);
-		ImGui::DragFloat3("controlPoints2", &controlPoints[2].x, 0.01f);
-		ImGui::DragFloat3("controlPoints3", &controlPoints[3].x, 0.01f);
-
-		ImGui::End();
 
 
 		/// ===回転行列を生成=== ///
@@ -1528,8 +1562,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//obb2.orientations[2].y = rotateMatrix2.m[2][1];
 		//obb2.orientations[2].z = rotateMatrix2.m[2][2];
 
+		/// ===階層構造=== ///
+		// 階層構造の作成
+		Matrix4x4 parentMatrix = MakeAffineMatrix(scales[0], rotates[0], translates[0]);
+		Matrix4x4 childMatrix = MultiplyMatrix(MakeAffineMatrix(scales[1], rotates[1], translates[1]), parentMatrix);
+		Matrix4x4 grandChildMatrix = MultiplyMatrix(MakeAffineMatrix(scales[2], rotates[2], translates[2]), childMatrix);
+
+		// 球のローカル位置
+		Vector3 localPositions[3] = {
+			{0.0f, 0.0f, 0.0f},
+			{0.0f, 0.0f, 0.0f},
+			{0.0f, 0.0f, 0.0f},
+		};
 
 
+		// 球のグローバル位置
+		Vector3 globalPositions[3];
+		globalPositions[0] = Transform(localPositions[0], parentMatrix);
+		globalPositions[1] = Transform(localPositions[1], childMatrix);
+		globalPositions[2] = Transform(localPositions[2], grandChildMatrix);
+
+		// 球の描画
+		Sphere spheres[3] = {
+			{globalPositions[0], 0.1f},
+			{globalPositions[1], 0.1f},
+			{globalPositions[2], 0.1f},
+		};
 
 		///
 		/// ↑更新処理ここまで
@@ -1630,7 +1688,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		/// ===Cutmull-rom曲線の描画=== ///
-		DrawCatmullRom(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawCatmullRom(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+		/// ===階層構造=== ///
+		//static_castしろ
+		// 球同士を線でつなぐ
+		Vector3 center1 = Transform(spheres[0].center, worldViewProjectionMatrix);
+		Vector3 center2 = Transform(spheres[1].center, worldViewProjectionMatrix);
+		Vector3 center3 = Transform(spheres[2].center, worldViewProjectionMatrix);
+
+		Vector3 projectedCenter1 = Transform(center1, viewportMatrix);
+		Vector3 projectedCenter2 = Transform(center2, viewportMatrix);
+		Vector3 projectedCenter3 = Transform(center3, viewportMatrix);
+
+		Novice::DrawLine(int(projectedCenter1.x), int(projectedCenter1.y), int(projectedCenter2.x), int(projectedCenter2.y), WHITE);
+		Novice::DrawLine(int(projectedCenter2.x), int(projectedCenter2.y), int(projectedCenter3.x), int(projectedCenter3.y), WHITE);
+
+		DrawSphere(spheres[0], worldViewProjectionMatrix, viewportMatrix, RED);
+		DrawSphere(spheres[1], worldViewProjectionMatrix, viewportMatrix, GREEN);
+		DrawSphere(spheres[2], worldViewProjectionMatrix, viewportMatrix, BLUE);
+
+
+
 
 
 		///
