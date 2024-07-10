@@ -1267,7 +1267,17 @@ Matrix4x4 LookAt(const Vector3& eye, const Vector3& target, const Vector3& up) {
 	return viewMatrix;
 }
 
-
+// ImGuiでMatrix4x4を表示する関数
+void ImGuiMatrix4x4(const char* label, const Matrix4x4& matrix) {
+	ImGui::Text("%s:", label);
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			ImGui::Text("%6.2f  ", matrix.m[i][j]);
+		}
+		ImGui::Separator();
+	}
+	ImGui::Spacing();
+}
 
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -1391,6 +1401,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{1.0f,1.0f,1.0f}
 	};
 
+
+	///演算子オーバーロード用
+	Vector3 a{ 0.2f,1.0f,0.0f };
+	Vector3 b{ 2.4f,3.1f,1.2f };
+	Vector3 c = a + b;
+	Vector3 d = a - b;
+	Vector3 e = a * 2.4f;
+	Vector3 rotateO{ 0.4f,1.43f,-0.8f };
+	Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotateO.x);
+	Matrix4x4 rotateYMatrix = MakeRotateXMatrix(rotateO.y);
+	Matrix4x4 rotateZMatrix = MakeRotateXMatrix(rotateO.z);
+	Matrix4x4 rotateMatrix = rotateXMatrix * rotateYMatrix * rotateZMatrix;
+
+
+
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -1474,7 +1499,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui::End();
 
+		ImGui::Begin("Overlord");
 
+		// ベクトルの加算
+		Vector3 resultAdd = a + b;
+		ImGui::Text("Vector Addition:");
+		ImGui::Text("a + b = (%.2f, %.2f, %.2f)", resultAdd.x, resultAdd.y, resultAdd.z);
+
+		// ベクトルの減算
+		Vector3 resultSubtract = a - b;
+		ImGui::Text("Vector Subtraction:");
+		ImGui::Text("a - b = (%.2f, %.2f, %.2f)", resultSubtract.x, resultSubtract.y, resultSubtract.z);
+
+		// ベクトルのスカラー倍
+		Vector3 resultScalarMultiply = a * 2.4f;
+		ImGui::Text("Vector Scalar Multiplication:");
+		ImGui::Text("a * 2.4 = (%.2f, %.2f, %.2f)", resultScalarMultiply.x, resultScalarMultiply.y, resultScalarMultiply.z);
+
+		ImGuiMatrix4x4("Rotate X Matrix", rotateXMatrix);
+		ImGuiMatrix4x4("Rotate Y Matrix", rotateYMatrix);
+		ImGuiMatrix4x4("Rotate Z Matrix", rotateZMatrix);
+		ImGuiMatrix4x4("Rotate Matrix (XYZ)", rotateMatrix);
+
+
+		ImGui::End();
 
 		/// ===デバックカメラ起動=== ///
 		if (keys[DIK_SPACE] && !preKeys[DIK_SPACE]) {
@@ -1707,9 +1755,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DrawSphere(spheres[0], worldViewProjectionMatrix, viewportMatrix, RED);
 		DrawSphere(spheres[1], worldViewProjectionMatrix, viewportMatrix, GREEN);
 		DrawSphere(spheres[2], worldViewProjectionMatrix, viewportMatrix, BLUE);
-
-
-
 
 
 		///
