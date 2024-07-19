@@ -61,6 +61,22 @@ struct OBB {
 	Vector3 size;			//座標軸方向の長さの半分。中心から面までの距離
 };
 
+struct Spring {
+	//アンカー
+	Vector3 anchor;
+	float nuturalLenght; //自然長
+	float stiffness;	 //剛性、ばね定数k
+	float dampingCoefficient; //減衰係数
+};
+
+struct  Ball {
+	Vector3 position;		//ボールの位置
+	Vector3 velocity;		//ボールの速度
+	Vector3 acceleration;	//ボールの加速度
+	float mass;				//ボールの質量
+	float radius;			//ボールの半径
+	unsigned int color;		//ボールの色
+};
 
 ///-------------------------------
 ///関数の宣言
@@ -1415,6 +1431,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Matrix4x4 rotateMatrix = rotateXMatrix * rotateYMatrix * rotateZMatrix;
 
 
+	/// ===バネ=== ///
+	Spring spring{};
+	spring.anchor = { 0.0f,0.0f,0.0f };
+	spring.nuturalLenght = 1.0f;
+	spring.stiffness = 100.0f;
+	spring.dampingCoefficient = 2.0f;
+
+	/// ===ボール=== ///
+	Ball ball{};
+	ball.position = { 1.2f,0.0f,0.0f };
+	ball.mass = 2.0f;
+	ball.radius = 0.05f;
+	ball.color = BLUE;
+
+	/// ===60fps=== ///
+	float deltaTime = 1.0f / 60.0f;
+
+	bool isBallMove = false;
+
+
+
+
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1499,8 +1537,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui::End();
 
-		ImGui::Begin("Overlord");
+		/// ===Spring=== ///
+		ImGui::Begin("Spring");
+		// isBallMoveのチェックボックス
+		ImGui::Checkbox("Is Ball Move", &isBallMove);
+		ImGui::End();
 
+		/// ===Overlord=== ///
+		ImGui::Begin("Overlord");
 		// ベクトルの加算
 		Vector3 resultAdd = a + b;
 		ImGui::Text("Vector Addition:");
@@ -1520,8 +1564,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGuiMatrix4x4("Rotate Y Matrix", rotateYMatrix);
 		ImGuiMatrix4x4("Rotate Z Matrix", rotateZMatrix);
 		ImGuiMatrix4x4("Rotate Matrix (XYZ)", rotateMatrix);
-
-
 		ImGui::End();
 
 		/// ===デバックカメラ起動=== ///
@@ -1532,7 +1574,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				IsDebugCameraActive = true;
 			}
 		}
-
 
 		/// ===デバックカメラ起動=== ///
 		// デバッグカメラが有効になっている場合、マウスの動きによってカメラを回転させる
@@ -1565,12 +1606,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotate, translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, cameraTranslate);
 
-
 		Matrix4x4 viewMatrix = LookAt(cameraTranslate, cameraTarget.center, { 0.0f, 1.0f, 0.0f });
 		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		Matrix4x4 worldViewProjectionMatrix = MultiplyMatrix(worldMatrix, MultiplyMatrix(viewMatrix, projectionMatrix));
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
-
 
 		//Matrix4x4 viewMatrix = InverseMatrix(cameraMatrix);
 		//Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
@@ -1612,30 +1651,59 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		/// ===階層構造=== ///
 		// 階層構造の作成
-		Matrix4x4 parentMatrix = MakeAffineMatrix(scales[0], rotates[0], translates[0]);
-		Matrix4x4 childMatrix = MultiplyMatrix(MakeAffineMatrix(scales[1], rotates[1], translates[1]), parentMatrix);
-		Matrix4x4 grandChildMatrix = MultiplyMatrix(MakeAffineMatrix(scales[2], rotates[2], translates[2]), childMatrix);
+		//Matrix4x4 parentMatrix = MakeAffineMatrix(scales[0], rotates[0], translates[0]);
+		//Matrix4x4 childMatrix = MultiplyMatrix(MakeAffineMatrix(scales[1], rotates[1], translates[1]), parentMatrix);
+		//Matrix4x4 grandChildMatrix = MultiplyMatrix(MakeAffineMatrix(scales[2], rotates[2], translates[2]), childMatrix);
+		//// 球のローカル位置
+		//Vector3 localPositions[3] = {
+		//	{0.0f, 0.0f, 0.0f},
+		//	{0.0f, 0.0f, 0.0f},
+		//	{0.0f, 0.0f, 0.0f},
+		//};
+		//// 球のグローバル位置
+		//Vector3 globalPositions[3];
+		//globalPositions[0] = Transform(localPositions[0], parentMatrix);
+		//globalPositions[1] = Transform(localPositions[1], childMatrix);
+		//globalPositions[2] = Transform(localPositions[2], grandChildMatrix);
+		//// 球の描画
+		//Sphere spheres[3] = {
+		//	{globalPositions[0], 0.1f},
+		//	{globalPositions[1], 0.1f},
+		//	{globalPositions[2], 0.1f},
+		//};
 
-		// 球のローカル位置
-		Vector3 localPositions[3] = {
-			{0.0f, 0.0f, 0.0f},
-			{0.0f, 0.0f, 0.0f},
-			{0.0f, 0.0f, 0.0f},
-		};
+
+		/// ===バネの処理=== ///
+		if (isBallMove) {
+			Vector3 diff = ball.position - spring.anchor;
+			float length = Length(diff);
+			if (length != 0.0f) {
+				Vector3 direction = Normalize(diff);
+				Vector3 restPosition = spring.anchor + MultiplyVector3(direction, spring.nuturalLenght);
+				Vector3 displacement = MultiplyVector3(( ball.position - restPosition ), length);
+				Vector3 restoringForce = MultiplyVector3(displacement, -spring.stiffness);
+				Vector3 dampingForce = MultiplyVector3(ball.velocity, -spring.dampingCoefficient);
+				Vector3 force = restoringForce + dampingForce;
+				ball.acceleration = force / ball.mass;
+			}
+		}
+
+		//加速度も速度門どちらも秒を基準とした値である
+		//それが、1/60秒間(deltaTime)適用されたと考える
+		ball.velocity.x = ball.velocity.x + ( ball.acceleration.x * deltaTime );
+		ball.velocity.y = ball.velocity.y + ( ball.acceleration.y * deltaTime );
+		ball.velocity.z = ball.velocity.z + ( ball.acceleration.z * deltaTime );
+
+		ball.position.x = ball.position.x + ( ball.velocity.x * deltaTime );
+		ball.position.y = ball.position.y + ( ball.velocity.y * deltaTime );
+		ball.position.z = ball.position.z + ( ball.velocity.z * deltaTime );
+
+		//ボール
+		Sphere ballSphere = { ball.position,0.1f };
 
 
-		// 球のグローバル位置
-		Vector3 globalPositions[3];
-		globalPositions[0] = Transform(localPositions[0], parentMatrix);
-		globalPositions[1] = Transform(localPositions[1], childMatrix);
-		globalPositions[2] = Transform(localPositions[2], grandChildMatrix);
 
-		// 球の描画
-		Sphere spheres[3] = {
-			{globalPositions[0], 0.1f},
-			{globalPositions[1], 0.1f},
-			{globalPositions[2], 0.1f},
-		};
+
 
 		///
 		/// ↑更新処理ここまで
@@ -1741,20 +1809,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ===階層構造=== ///
 		//static_castしろ
 		// 球同士を線でつなぐ
-		Vector3 center1 = Transform(spheres[0].center, worldViewProjectionMatrix);
-		Vector3 center2 = Transform(spheres[1].center, worldViewProjectionMatrix);
-		Vector3 center3 = Transform(spheres[2].center, worldViewProjectionMatrix);
+		//Vector3 center1 = Transform(spheres[0].center, worldViewProjectionMatrix);
+		//Vector3 center2 = Transform(spheres[1].center, worldViewProjectionMatrix);
+		//Vector3 center3 = Transform(spheres[2].center, worldViewProjectionMatrix);
 
-		Vector3 projectedCenter1 = Transform(center1, viewportMatrix);
-		Vector3 projectedCenter2 = Transform(center2, viewportMatrix);
-		Vector3 projectedCenter3 = Transform(center3, viewportMatrix);
+		//Vector3 projectedCenter1 = Transform(center1, viewportMatrix);
+		//Vector3 projectedCenter2 = Transform(center2, viewportMatrix);
+		//Vector3 projectedCenter3 = Transform(center3, viewportMatrix);
 
-		Novice::DrawLine(int(projectedCenter1.x), int(projectedCenter1.y), int(projectedCenter2.x), int(projectedCenter2.y), WHITE);
-		Novice::DrawLine(int(projectedCenter2.x), int(projectedCenter2.y), int(projectedCenter3.x), int(projectedCenter3.y), WHITE);
+		//Novice::DrawLine(int(projectedCenter1.x), int(projectedCenter1.y), int(projectedCenter2.x), int(projectedCenter2.y), WHITE);
+		//Novice::DrawLine(int(projectedCenter2.x), int(projectedCenter2.y), int(projectedCenter3.x), int(projectedCenter3.y), WHITE);
 
-		DrawSphere(spheres[0], worldViewProjectionMatrix, viewportMatrix, RED);
-		DrawSphere(spheres[1], worldViewProjectionMatrix, viewportMatrix, GREEN);
-		DrawSphere(spheres[2], worldViewProjectionMatrix, viewportMatrix, BLUE);
+		//DrawSphere(spheres[0], worldViewProjectionMatrix, viewportMatrix, RED);
+		//DrawSphere(spheres[1], worldViewProjectionMatrix, viewportMatrix, GREEN);
+		//DrawSphere(spheres[2], worldViewProjectionMatrix, viewportMatrix, BLUE);
+
+
+		/// ===バネ=== ///cameraTarget
+		//バネの描画
+		Vector3 ballCenter = Transform(ballSphere.center, worldViewProjectionMatrix);
+		Vector3 targetCenter = Transform(cameraTarget.center, worldViewProjectionMatrix);
+
+		Vector3 projectedBallCenter = Transform(ballCenter, viewportMatrix);
+		Vector3 targetBallCenter = Transform(targetCenter, viewportMatrix);
+
+		Novice::DrawLine(int(targetBallCenter.x), int(targetBallCenter.y), int(projectedBallCenter.x), int(projectedBallCenter.y), WHITE);
+
+		//ballの描画
+		DrawSphere(ballSphere, worldViewProjectionMatrix, viewportMatrix, ball.color);
+
 
 
 		///
