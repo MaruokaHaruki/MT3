@@ -1445,14 +1445,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ball.radius = 0.05f;
 	ball.color = BLUE;
 
+	bool isBallMove = false;
+
 	/// ===60fps=== ///
 	float deltaTime = 1.0f / 60.0f;
 
-	bool isBallMove = false;
+	/// ===円運動=== ///
+	float angularVelocity = 3.14f;
+	float angle = 0.0f;
 
+	Sphere circularMotionSphere = { {0.0f,4.0f,0.0f},0.1f };
 
-
-
+	bool isCircularMotion = false;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1541,6 +1545,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("Spring");
 		// isBallMoveのチェックボックス
 		ImGui::Checkbox("Is Ball Move", &isBallMove);
+		//isCircularMotion
+		ImGui::Checkbox("Is Circular Motion ", &isCircularMotion);
+
 		ImGui::End();
 
 		/// ===Overlord=== ///
@@ -1701,9 +1708,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//ボール
 		Sphere ballSphere = { ball.position,0.1f };
 
-
-
-
+		/// ===円運動=== ///
+		if (isCircularMotion) {
+			angle += angularVelocity * deltaTime;
+			circularMotionSphere.center.x = 0.0f + std::cos(angle) * 1.0f;
+			circularMotionSphere.center.y = 0.0f + std::sin(angle) * 1.0f;
+			circularMotionSphere.center.z = 0.0f;
+		}
 
 		///
 		/// ↑更新処理ここまで
@@ -1827,18 +1838,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		/// ===バネ=== ///cameraTarget
 		//バネの描画
-		Vector3 ballCenter = Transform(ballSphere.center, worldViewProjectionMatrix);
-		Vector3 targetCenter = Transform(cameraTarget.center, worldViewProjectionMatrix);
+		//Vector3 ballCenter = Transform(ballSphere.center, worldViewProjectionMatrix);
+		//Vector3 targetCenter = Transform(cameraTarget.center, worldViewProjectionMatrix);
 
-		Vector3 projectedBallCenter = Transform(ballCenter, viewportMatrix);
-		Vector3 targetBallCenter = Transform(targetCenter, viewportMatrix);
+		//Vector3 projectedBallCenter = Transform(ballCenter, viewportMatrix);
+		//Vector3 targetBallCenter = Transform(targetCenter, viewportMatrix);
 
-		Novice::DrawLine(int(targetBallCenter.x), int(targetBallCenter.y), int(projectedBallCenter.x), int(projectedBallCenter.y), WHITE);
+		//Novice::DrawLine(int(targetBallCenter.x), int(targetBallCenter.y), int(projectedBallCenter.x), int(projectedBallCenter.y), WHITE);
 
 		//ballの描画
-		DrawSphere(ballSphere, worldViewProjectionMatrix, viewportMatrix, ball.color);
+		//DrawSphere(ballSphere, worldViewProjectionMatrix, viewportMatrix, ball.color);
 
 
+		/// ===円運動=== ///circularMotionSphere
+		DrawSphere(circularMotionSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
