@@ -1277,7 +1277,20 @@ bool IsOBB2OBBCollision(const OBB& obb1, const OBB& obb2) {
 	return true;
 }
 
-
+/// <summary>
+/// 反射ベクトルを計算する
+/// </summary>
+/// <param name="input">入力ベクトル（ボールの速度）</param>
+/// <param name="normal">法線ベクトル（平面の法線）</param>
+/// <returns>反射ベクトル</returns>
+Vector3 Reflect(const Vector3& input, const Vector3& normal) {
+	float dotProduct = input.x * normal.x + input.y * normal.y + input.z * normal.z;
+	Vector3 reflected;
+	reflected.x = input.x - 2.0f * dotProduct * normal.x;
+	reflected.y = input.y - 2.0f * dotProduct * normal.y;
+	reflected.z = input.z - 2.0f * dotProduct * normal.z;
+	return reflected;
+}
 
 
 ///=====================================================/// 
@@ -1499,6 +1512,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Sphere conicalPendulumSphere{ {0.0f,0.0f,0.0f},0.1f };
 	//振り子が動いているか
 	bool isConicalPenduluMove = false;
+
+	/// ==反射ベクトル=== ///
+	//ボール
+	Ball refBall{};
+	refBall.position = { 0.8f,1.0f,-0.3f };
+	refBall.acceleration = { 0.0f,-9.8f,0.0f };
+	refBall.mass = 2.0f;
+	refBall.radius = 0.05f;
+	refBall.color = BLUE;
+	//地面
+	Plane refPlane;
+	refPlane.normal = Normalize({ -0.2f,0.9f,-0.3f });
+	refPlane.distance = 0.0f;
+	//反射速度
+	float refVelocity = 1.0f;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1787,6 +1815,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 
+		/// ===反射ベクトル=== ///
+		refBall.velocity.x += refBall.acceleration.x * deltaTime;
+		refBall.velocity.y += refBall.acceleration.y * deltaTime;
+		refBall.velocity.z += refBall.acceleration.z * deltaTime;
+
+		refBall.position.x += refBall.velocity.x * deltaTime;
+		refBall.position.y += refBall.velocity.y * deltaTime;
+		refBall.position.z += refBall.velocity.z * deltaTime;
+
+		//ボール
+		Sphere refBallSphere = { refBall.position,refBall.radius };
+
+		if (IsSphere2PlaneCollision(refBallSphere, refPlane)) {
+			Vector3 reflected = Reflect(refBall.velocity,refPlane.normal);
+			Vector3 projectToNormal = Project(reflected,refPlane.normal);
+			Vector3 movingDirection = reflected - projectToNormal;
+			refBall.velocity = projectToNormal * refVelocity + movingDirection;
+		}
+
+
+
+
+
+
+
+
 
 		///
 		/// ↑更新処理ここまで
@@ -1876,7 +1930,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		/// ===OBB同士の当たり判定=== ///
 		//DrawOBB(obb2, worldViewProjectionMatrix, viewportMatrix, WHITE);
-
+		
 		//if (IsOBB2OBBCollision(obb,obb2)) {
 		//	DrawOBB(obb, worldViewProjectionMatrix, viewportMatrix, RED);
 		//} else {
@@ -1936,17 +1990,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//DrawSphere(pendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		/// ===円錐振り子=== ///
-		Vector3 coniPendBallCenter = Transform(pendulum.anchor, worldViewProjectionMatrix);
-		Vector3 coniPendTargetCenter = Transform(conicalPendulumSphere.center, worldViewProjectionMatrix);
+		//Vector3 coniPendBallCenter = Transform(pendulum.anchor, worldViewProjectionMatrix);
+		//Vector3 coniPendTargetCenter = Transform(conicalPendulumSphere.center, worldViewProjectionMatrix);
 
-		Vector3 coniPendProjectedBallCenter = Transform(coniPendBallCenter, viewportMatrix);
-		Vector3 coniPendTargetBallCenter = Transform(coniPendTargetCenter, viewportMatrix);
+		//Vector3 coniPendProjectedBallCenter = Transform(coniPendBallCenter, viewportMatrix);
+		//Vector3 coniPendTargetBallCenter = Transform(coniPendTargetCenter, viewportMatrix);
 
-		Novice::DrawLine(int(coniPendTargetBallCenter.x), int(coniPendTargetBallCenter.y), int(coniPendProjectedBallCenter.x), int(coniPendProjectedBallCenter.y), WHITE);
-		DrawSphere(conicalPendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//Novice::DrawLine(int(coniPendTargetBallCenter.x), int(coniPendTargetBallCenter.y), int(coniPendProjectedBallCenter.x), int(coniPendProjectedBallCenter.y), WHITE);
+		//DrawSphere(conicalPendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
-
-
+		/// ===反射ベクトル=== ///
+		//板
+		DrawPlane(refPlane, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//球
+		DrawSphere(refBallSphere, worldViewProjectionMatrix, viewportMatrix, refBall.color);
 
 
 
