@@ -78,6 +78,17 @@ struct  Ball {
 	unsigned int color;		//ボールの色
 };
 
+//振り子構造体
+struct Pendulum {
+	Vector3 anchor;				//アンカーポイント
+	float length;				//紐の長さ
+	float angle;				//現在の角度
+	float angularVelocity;		//角度
+	float angularAcceleration;	//角加速度
+};
+
+
+
 ///-------------------------------
 ///関数の宣言
 ///-------------------------------
@@ -1453,10 +1464,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	/// ===円運動=== ///
 	float angularVelocity = 3.14f;
 	float angle = 0.0f;
-
 	Sphere circularMotionSphere = { {0.0f,4.0f,0.0f},0.1f };
-
 	bool isCircularMotion = false;
+
+
+	/// ===振り子運動=== ///
+	Pendulum pendulum;
+	pendulum.anchor = { 0.0f,1.0f,0.0f };
+	pendulum.length = 0.8f;
+	pendulum.angle = 0.7f;
+	pendulum.angularVelocity = 0.0f;
+	pendulum.angularAcceleration = 0.0f;
+	//振り子の先端
+	Sphere pendulumSphere{ {0.0f,0.0f,0.0f},0.1f };
+	//振り子が動いているか
+	bool isPendulumMove = false;
+
+
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1547,6 +1571,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Checkbox("Is Ball Move", &isBallMove);
 		//isCircularMotion
 		ImGui::Checkbox("Is Circular Motion ", &isCircularMotion);
+		//isPendulumMove
+		ImGui::Checkbox("Is Pendulum Motion ", &isPendulumMove);
 
 		ImGui::End();
 
@@ -1716,6 +1742,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			circularMotionSphere.center.z = 0.0f;
 		}
 
+		/// ===振り子=== ///
+		if (isPendulumMove) {
+			pendulum.angularAcceleration = -( 9.8f / pendulum.length ) * std::sin(pendulum.angle);
+			pendulum.angularVelocity += pendulum.angularAcceleration * deltaTime;
+			pendulum.angle += pendulum.angularVelocity * deltaTime;
+			//振り子の先端
+			pendulumSphere.center.x = pendulum.anchor.x + std::sin(pendulum.angle) * pendulum.length;
+			pendulumSphere.center.y = pendulum.anchor.y - std::cos(pendulum.angle) * pendulum.length;
+			pendulumSphere.center.z = pendulum.anchor.z;
+		}
+
+
+
+
+
+
+
+
 		///
 		/// ↑更新処理ここまで
 		///
@@ -1851,7 +1895,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 		/// ===円運動=== ///circularMotionSphere
-		DrawSphere(circularMotionSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//DrawSphere(circularMotionSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+		/// ===振り子=== ///
+		Vector3 pendBallCenter = Transform(pendulum.anchor, worldViewProjectionMatrix);
+		Vector3 pendTargetCenter = Transform(pendulumSphere.center, worldViewProjectionMatrix);
+
+		Vector3 pendProjectedBallCenter = Transform(pendBallCenter, viewportMatrix);
+		Vector3 pendTargetBallCenter = Transform(pendTargetCenter, viewportMatrix);
+
+		Novice::DrawLine(int(pendTargetBallCenter.x), int(pendTargetBallCenter.y), int(pendProjectedBallCenter.x), int(pendProjectedBallCenter.y), WHITE);
+		DrawSphere(pendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+
+
 
 		///
 		/// ↑描画処理ここまで
