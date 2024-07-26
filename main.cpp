@@ -87,6 +87,14 @@ struct Pendulum {
 	float angularAcceleration;	//角加速度
 };
 
+//円錐振り子
+struct ConicalPendulum {
+	Vector3 anchor;
+	float lenght;
+	float halfApexAngle;
+	float angle;
+	float angularVelocity;
+};
 
 
 ///-------------------------------
@@ -1480,7 +1488,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//振り子が動いているか
 	bool isPendulumMove = false;
 
-
+	/// ===円錐振り子=== ///
+	ConicalPendulum conicalPendulum;
+	conicalPendulum.anchor = { 0.0f,0.0f,0.0f };
+	conicalPendulum.lenght = 0.8f;
+	conicalPendulum.halfApexAngle = 0.7f;
+	conicalPendulum.angle = 0.0f;
+	conicalPendulum.angularVelocity = 0.0f;
+	//円錐振り子の先端
+	Sphere conicalPendulumSphere{ {0.0f,0.0f,0.0f},0.1f };
+	//振り子が動いているか
+	bool isConicalPenduluMove = false;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -1573,6 +1591,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Checkbox("Is Circular Motion ", &isCircularMotion);
 		//isPendulumMove
 		ImGui::Checkbox("Is Pendulum Motion ", &isPendulumMove);
+		//isConicalPenduluMove
+		ImGui::Checkbox("Is Conical Pendulum Motion ", &isConicalPenduluMove);
 
 		ImGui::End();
 
@@ -1753,9 +1773,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			pendulumSphere.center.z = pendulum.anchor.z;
 		}
 
-
-
-
+		/// ===円錐振り子=== ///
+		if (isConicalPenduluMove) {
+			conicalPendulum.angularVelocity = std::sqrt(9.8f / ( conicalPendulum.lenght * std::cosf(conicalPendulum.halfApexAngle) ));
+			conicalPendulum.angle += conicalPendulum.angularVelocity * deltaTime;
+			//振り子の先端
+			float radius = std::sin(conicalPendulum.halfApexAngle) * conicalPendulum.lenght;
+			float height = std::cos(conicalPendulum.halfApexAngle) * conicalPendulum.lenght;
+			conicalPendulumSphere.center.x = conicalPendulum.anchor.x + std::cos(conicalPendulum.angle) * radius;
+			conicalPendulumSphere.center.y = conicalPendulum.anchor.y - height;
+			conicalPendulumSphere.center.z = conicalPendulum.anchor.z- std::sin(conicalPendulum.angle) * radius;
+		}
 
 
 
@@ -1898,14 +1926,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//DrawSphere(circularMotionSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
 
 		/// ===振り子=== ///
-		Vector3 pendBallCenter = Transform(pendulum.anchor, worldViewProjectionMatrix);
-		Vector3 pendTargetCenter = Transform(pendulumSphere.center, worldViewProjectionMatrix);
+		//Vector3 pendBallCenter = Transform(pendulum.anchor, worldViewProjectionMatrix);
+		//Vector3 pendTargetCenter = Transform(pendulumSphere.center, worldViewProjectionMatrix);
 
-		Vector3 pendProjectedBallCenter = Transform(pendBallCenter, viewportMatrix);
-		Vector3 pendTargetBallCenter = Transform(pendTargetCenter, viewportMatrix);
+		//Vector3 pendProjectedBallCenter = Transform(pendBallCenter, viewportMatrix);
+		//Vector3 pendTargetBallCenter = Transform(pendTargetCenter, viewportMatrix);
 
-		Novice::DrawLine(int(pendTargetBallCenter.x), int(pendTargetBallCenter.y), int(pendProjectedBallCenter.x), int(pendProjectedBallCenter.y), WHITE);
-		DrawSphere(pendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+		//Novice::DrawLine(int(pendTargetBallCenter.x), int(pendTargetBallCenter.y), int(pendProjectedBallCenter.x), int(pendProjectedBallCenter.y), WHITE);
+		//DrawSphere(pendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+		/// ===円錐振り子=== ///
+		Vector3 coniPendBallCenter = Transform(pendulum.anchor, worldViewProjectionMatrix);
+		Vector3 coniPendTargetCenter = Transform(conicalPendulumSphere.center, worldViewProjectionMatrix);
+
+		Vector3 coniPendProjectedBallCenter = Transform(coniPendBallCenter, viewportMatrix);
+		Vector3 coniPendTargetBallCenter = Transform(coniPendTargetCenter, viewportMatrix);
+
+		Novice::DrawLine(int(coniPendTargetBallCenter.x), int(coniPendTargetBallCenter.y), int(coniPendProjectedBallCenter.x), int(coniPendProjectedBallCenter.y), WHITE);
+		DrawSphere(conicalPendulumSphere, worldViewProjectionMatrix, viewportMatrix, WHITE);
+
+
 
 
 
